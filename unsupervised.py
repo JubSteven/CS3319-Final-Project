@@ -53,15 +53,11 @@ def aug_eval(raw_data, sota=None):
     original_result = inference_wrapper(raw_data, model_path='model.pt')
     aug_result = inference_wrapper(augmented_data, model_path='model.pt')
 
-    if aug_result["val_acc"] >= 0.8:
-        print(aug_result["val_acc"])
-        torch.save(augmented_data, "data\data_augmented.pt")
-        assert False, "Too good to continue"
-
     if sota is None:
         sota = original_result["val_acc"]
 
     elif aug_result["val_acc"] > sota:
+        print("Update SOTA to : ", aug_result["val_acc"].item())
         print("Number of edges removed: ", raw_data.edge_index.size(1) - augmented_data.edge_index.size(1))
         torch.save(augmented_data, "data\data_augmented.pt")
     
@@ -81,6 +77,11 @@ for i in tqdm(range(N)):
     aug_results.append(aug_result["val_acc"].item())
     if aug_result["val_acc"].item() > sota:
         sota = aug_result["val_acc"].item()
-    
-print(f"Original results: {original_results}")
-print(f"Augmented results: {aug_results}")
+
+# Plot the aug_results
+import matplotlib.pyplot as plt
+
+# Box plot
+plt.boxplot([original_results, aug_results])
+print(max(aug_results))
+plt.show()

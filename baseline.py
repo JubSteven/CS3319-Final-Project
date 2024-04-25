@@ -98,20 +98,24 @@ def train_warpper(data, model, max_epoches, lr=0.001, weight_decay=5e-4, eval_in
     eval_result = val(data, model)
     print_eval_result(eval_result, prefix=f'[Final Result] Time: {train_time:.2f}s |')
 
-# Inference function
-def inference(data, model, path=None):
-    if path is not None:
-        model.load_state_dict(torch.load(path))
-    model.eval()
-    with torch.no_grad():
-        x, edge_index = data.x, data.edge_index
-        pred = model(x, edge_index).detach()
-    return torch.argmax(pred, dim=1)
 
+
+def inference_wrapper(data, model_path='model.pt'):
+    """
+        Input:
+            data: torch_geometric.data.Data
+            model_path: str
+    """
+    model = GCN_Net(2, data.num_features, 32, 7, 0.4)
+    model.load_state_dict(torch.load(model_path))
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
+    model.to(device)
+    data.to(device)
+    results = val(data, model)
+    return results
 
 if __name__ == "__main__":
     data = torch.load('data\data.pt')
-    data.x, data.y, data.edge_index, data.train_mask, data.val_mask, data.num_classes, data.num_features
     model = GCN_Net(2, data.num_features, 32, 7, 0.4)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
     model.to(device)

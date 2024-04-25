@@ -2,6 +2,7 @@ from baseline import inference_wrapper
 import torch
 import torch_geometric.utils as pyg_utils
 import networkx as nx
+from tqdm import tqdm
 
 def edge_level_augmentation(graph, pe, pt, centrality_measure='degree'):
     graph_aug = graph.clone()
@@ -42,15 +43,33 @@ def edge_level_augmentation(graph, pe, pt, centrality_measure='degree'):
     graph_aug.edge_index = graph_aug.edge_index[:, ~mask]
     
     # Print the number of removed edges
-    print(f"Number of removed edges: {removed_edge_count}")
+    # print(f"Number of removed edges: {removed_edge_count}")
     
     return graph_aug
 
+def aug_eval(raw_data):
+    augmented_data = edge_level_augmentation(raw_data, 0.025, 0.1, centrality_measure='degree')
+
+    original_result = inference_wrapper(raw_data, model_path='model.pt')
+    aug_result = inference_wrapper(augmented_data, model_path='model.pt')
+
+    if aug_result["val_acc"] > original_result["val_acc"]:
+        print("Augmentation improved the model performance, dumping the augmented data")
+        print("Number of edges removed: ", raw_data.edge_index.size(1) - augmented_data.edge_index.size(1))
+        torch.save(augmented_data, "data\data_augmented.pt")
+        
+    return original_result, aug_result
+
+
 raw_data = torch.load("data\data.pt")
-augmented_data = edge_level_augmentation(raw_data, 0.15, 0.2, centrality_measure='degree')
+N = 10
+original_results = []
+aug_results = []
 
-original_result = inference_wrapper(raw_data, model_path='model.pt')
-print(original_result)
-
-aug_result = inference_wrapper(augmented_data, model_path='model.pt')
-print(aug_result)
+for i in tqdm(range(N)):
+    original_result, aug_result = aug_eval(raw_data)
+    original_results.append(original_result["val_acc"])
+    aug_results.append(aug_result["val_acc"])
+    
+print(f"Original results: {original_results}")
+print(f"Augmented results: {aug_results}")

@@ -47,29 +47,40 @@ def edge_level_augmentation(graph, pe, pt, centrality_measure='degree'):
     
     return graph_aug
 
-def aug_eval(raw_data):
-    augmented_data = edge_level_augmentation(raw_data, 0.025, 0.1, centrality_measure='degree')
+def aug_eval(raw_data, sota=None):
+    augmented_data = edge_level_augmentation(raw_data, 0.1, 0.2, centrality_measure='eigenvector')
 
     original_result = inference_wrapper(raw_data, model_path='model.pt')
     aug_result = inference_wrapper(augmented_data, model_path='model.pt')
 
-    if aug_result["val_acc"] > original_result["val_acc"]:
-        print("Augmentation improved the model performance, dumping the augmented data")
+    if aug_result["val_acc"] >= 0.8:
+        print(aug_result["val_acc"])
+        torch.save(augmented_data, "data\data_augmented.pt")
+        assert False, "Too good to continue"
+
+    if sota is None:
+        sota = original_result["val_acc"]
+
+    elif aug_result["val_acc"] > sota:
         print("Number of edges removed: ", raw_data.edge_index.size(1) - augmented_data.edge_index.size(1))
         torch.save(augmented_data, "data\data_augmented.pt")
+    
         
     return original_result, aug_result
 
 
 raw_data = torch.load("data\data.pt")
-N = 10
+N = 1000
 original_results = []
 aug_results = []
+sota = 0.7920 # This is aligned with the trained model.pt.
 
 for i in tqdm(range(N)):
-    original_result, aug_result = aug_eval(raw_data)
-    original_results.append(original_result["val_acc"])
-    aug_results.append(aug_result["val_acc"])
+    original_result, aug_result = aug_eval(raw_data, sota)
+    original_results.append(original_result["val_acc"].item())
+    aug_results.append(aug_result["val_acc"].item())
+    if aug_result["val_acc"].item() > sota:
+        sota = aug_result["val_acc"].item()
     
 print(f"Original results: {original_results}")
 print(f"Augmented results: {aug_results}")

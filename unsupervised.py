@@ -46,7 +46,6 @@ def edge_level_augmentation(graph, pe, pt, centrality_measure='degree'):
     
     return graph_aug
 
-
 raw_data = torch.load("data\data.pt")
 augmented_data = edge_level_augmentation(raw_data, 0.15, 0.2, centrality_measure='degree')
 

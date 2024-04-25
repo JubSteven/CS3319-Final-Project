@@ -106,7 +106,7 @@ def inference_wrapper(data, model_path='model.pt'):
             data: torch_geometric.data.Data
             model_path: str
     """
-    model = GCN_Net(2, data.num_features, 32, 7, 0.4)
+    model = GCN_Net(2, data.num_features, 32, 7, 0.4) # NOTE: cannot change
     model.load_state_dict(torch.load(model_path))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
     model.to(device)

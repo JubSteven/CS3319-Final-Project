@@ -107,7 +107,7 @@ def gen_graphs(cfg, graph_data, model):
     else:
         pickle.dump(adj_orig, open(f'graphs/graph_0.pkl', 'wb'))
 
-    features = graph_data.x.to(cfg.device)
+    features = graph_data.x.to(cfg["device"])
     for i in range(cfg["gen_graphs"]):
         with torch.no_grad():
             A_pred = model(features)
@@ -125,13 +125,8 @@ def gen_graphs(cfg, graph_data, model):
 
 
 def update_edge(data, adj_matrix):
-    edge_idx_update = []
-    for i in range(adj_matrix.shape[0]):
-        for j in range(adj_matrix.shape[1]):
-            if adj_matrix[i][j] > 0:
-                edge_idx_update.append([i, j])
-    edge_idx_update = np.array(edge_idx_update)
-    data.edge_index = torch.tensor(edge_idx_update).permute(1, 0).contiguous()
+    edge_idx_update = adj_matrix.indices
+    data.edge_index = edge_idx_update
     return data
 
 

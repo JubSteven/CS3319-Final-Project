@@ -12,7 +12,7 @@ def train(data_path, cfg):
     graph_data = GraphData(data_path, cfg["device"])
     model = GVAE(graph_data.adj_train, graph_data.x.shape[1], cfg["dim_h"], cfg["dim_z"],
                  use_gae=cfg["use_gae"]).to(cfg["device"])
-    train_model(cfg, graph_data, model)
+    model = train_model(cfg, graph_data, model)
 
     if cfg["gen_graphs"] > 0:
         # Generate graphs

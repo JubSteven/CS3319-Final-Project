@@ -12,7 +12,10 @@ def train(data_path, cfg):
     graph_data = GraphData(data_path, cfg["device"])
     model = GVAE(graph_data.adj_train, graph_data.x.shape[1], cfg["dim_h"], cfg["dim_z"],
                  use_gae=cfg["use_gae"]).to(cfg["device"])
-    model = train_model(cfg, graph_data, model)
+    if cfg["pretrained"]:
+        model.load_state_dict(torch.load(cfg["pretrained"]))
+    else:
+        model = train_model(cfg, graph_data, model)
 
     if cfg["gen_graphs"] > 0:
         # Generate graphs
@@ -23,6 +26,7 @@ if __name__ == "__main__":
     # dim_h represents the hidden size, while dim_z represents the embedding size
     # ENCODE[X -> h -> Z] -> DECODE[\hat{X}]
     cfg = {
+        "pretrained": "models/model.pth",
         "dim_h": 32,
         "dim_z": 16,
         "lr": 0.01,

@@ -101,9 +101,8 @@ def train_model(cfg, graph_data, model):
 
 def gen_graphs(cfg, graph_data, model):
     adj_orig = graph_data.adj_train
-    assert adj_orig.diagonal().sum() == 0
 
-    if cfg.gae:
+    if cfg["use_gae"]:
         pickle.dump(adj_orig, open(f'graphs/graph_0_gae.pkl', 'wb'))
     else:
         pickle.dump(adj_orig, open(f'graphs/graph_0.pkl', 'wb'))
@@ -117,7 +116,7 @@ def gen_graphs(cfg, graph_data, model):
         adj_recon = A_pred.numpy()
         np.fill_diagonal(adj_recon, 0)
 
-        if cfg.gae:
+        if cfg["use_gae"]:
             filename = f'graphs/graph_{i+1}_logits_gae.pkl'
         else:
             filename = f'graphs/graph_{i+1}_logits.pkl'

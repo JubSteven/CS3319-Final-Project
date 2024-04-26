@@ -15,17 +15,22 @@ class GraphData():
         # Filter out the validation and training data
         self.x_train = self.x[self.train_mask]
         self.edge_index_train = torch.stack(
-            [edge for edge in self.edge_index if self.train_mask[edge[0]] and self.train_mask[edge[1]]])
+            [edge for edge in self.edge_index.permute(1, 0) if self.train_mask[edge[0]] and self.train_mask[edge[1]]])
         self.edge_index_val = torch.stack(
-            [edge for edge in self.edge_index if self.val_mask[edge[0]] and self.val_mask[edge[1]]])
+            [edge for edge in self.edge_index.permute(1, 0) if self.val_mask[edge[0]] and self.val_mask[edge[1]]])
 
-        self.adj_matrix = self.build_adj(self.edge_index_train, self.x_train.shape[0]).numpy()
-        self.adj_matrix = self.normalize_adj(self.adj_matrix)
+        # Adjacency matrix contains all the edges in the graph
+        # NOTE: train_edges here can be all the edges or the training edges only
+        self.train_edges = self.edge_index
+        # ! self.x ought to be modified if train_edges is not all edges
+        self.adj_train = self.build_adj(self.train_edges, self.x.shape[0]).numpy()
+        self.adj_train = self.normalize_adj(self.adj_train)
 
-        self.adj_label = self.build_adj_label(self.edge_index_train, self.x_train.shape[0])
+        # ! self.x ought to be modified if train_edges is not all edges
+        self.adj_label = self.build_adj_label(self.train_edges, self.x.shape[0])
 
         self.val_edges = self.edge_index_val
-        self.val_edges_false = self.generate_false_edges(self.val_edges.size(1))
+        self.val_edges_false = self.generate_false_edges(self.val_edges.shape[0])
 
     def generate_false_edges(self, num_edges):
         """
@@ -36,7 +41,7 @@ class GraphData():
         while len(false_edges) < num_edges:
             src_node = np.random.randint(0, self.x.shape[0])
             dst_node = np.random.randint(0, self.x.shape[0])
-            if src_node != dst_node and not self.adj_matrix[src_node, dst_node]:
+            if src_node != dst_node and not self.adj_train[src_node, dst_node]:
                 false_edges.add((src_node, dst_node))
 
         false_edges = torch.tensor(list(false_edges)).to(self.device)
@@ -80,9 +85,8 @@ class GraphData():
         """
         adj = self.build_adj(edge_idx, num_verts, half)
         adj_label = adj + torch.eye(num_verts)
-        adj_label_tuple = self.sparse_to_tuple(adj_label)
-        adj_label = torch.sparse.FloatTensor(torch.LongTensor(adj_label_tuple[0].T),
-                                             torch.FloatTensor(adj_label_tuple[1]), torch.Size(adj_label_tuple[2]))
+        adj_label = adj_label.to_sparse()
+
         return adj_label
 
     def normalize_adj(self, adj_train):

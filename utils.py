@@ -11,15 +11,15 @@ from tqdm import tqdm
 
 
 def get_scores(edges_pos, edges_neg, A_pred, adj_label):
-    # get logists and labels
-    preds = A_pred[edges_pos.T]
-    preds_neg = A_pred[edges_neg.T]
-    logists = np.hstack([preds, preds_neg])
-    labels = np.hstack([np.ones(preds.size(0)), np.zeros(preds_neg.size(0))])
+    # get logits and labels
+    preds_pos = A_pred[edges_pos[:, 0], edges_pos[:, 1]]
+    preds_neg = A_pred[edges_neg[:, 0], edges_neg[:, 1]]
+    logits = np.hstack([preds_pos, preds_neg])
+    labels = np.hstack([np.ones(preds_pos.size(0)), np.zeros(preds_neg.size(0))])
 
-    roc_auc = roc_auc_score(labels, logists)
-    ap_score = average_precision_score(labels, logists)
-    precisions, recalls, thresholds = precision_recall_curve(labels, logists)
+    roc_auc = roc_auc_score(labels, logits)
+    ap_score = average_precision_score(labels, logits)
+    precisions, recalls, thresholds = precision_recall_curve(labels, logits)
     pr_auc = auc(recalls, precisions)
 
     f1s = np.nan_to_num(2 * precisions * recalls / (precisions + recalls))
@@ -57,7 +57,7 @@ def train_model(cfg, graph_data, model):
     pos_weight = torch.FloatTensor([float(adj_t.shape[0]**2 - adj_t.sum()) / adj_t.sum()]).to(cfg["device"])
 
     # move input data and label to gpu if needed
-    features = graph_data.features.to(cfg["device"])
+    features = graph_data.x.to(cfg["device"])
     adj_label = graph_data.adj_label.to_dense().to(cfg["device"])
 
     best_vali_criterion = 0.0
@@ -81,8 +81,8 @@ def train_model(cfg, graph_data, model):
             best_vali_criterion = r[cfg["criterion"]]
             best_state_dict = copy.deepcopy(model.state_dict())
             r_test = r
-            print("test_roc: {:.4f} test_ap: {:.4f} test_f1: {:.4f} test_recon_acc: {:.4f}".format(
-                r_test['roc'], r_test['ap'], r_test['f1'], r_test['acc']))
+            # print("test_roc: {:.4f} test_ap: {:.4f} test_f1: {:.4f} test_recon_acc: {:.4f}".format(
+            #     r_test['roc'], r_test['ap'], r_test['f1'], r_test['acc']))
 
         loss.backward()
         optimizer.step()
@@ -94,17 +94,19 @@ def train_model(cfg, graph_data, model):
           format(r_test['roc'], r_test['ap'], r_test['f1'], r_test['acc']))
 
     model.load_state_dict(best_state_dict)
+    # Dump the best model
+    torch.save(model.state_dict(), f'models/model.pth')
     return model
 
 
 def gen_graphs(cfg, graph_data, model):
-    adj_orig = graph_data.adj_matrix
+    adj_orig = graph_data.adj_train
     assert adj_orig.diagonal().sum() == 0
 
     if cfg.gae:
-        pickle.dump(adj_orig, open(f'graphs/{cfg.dataset}_graph_0_gae.pkl', 'wb'))
+        pickle.dump(adj_orig, open(f'graphs/graph_0_gae.pkl', 'wb'))
     else:
-        pickle.dump(adj_orig, open(f'graphs/{cfg.dataset}_graph_0.pkl', 'wb'))
+        pickle.dump(adj_orig, open(f'graphs/graph_0.pkl', 'wb'))
 
     features = graph_data.x.to(cfg.device)
     for i in range(cfg["gen_graphs"]):
@@ -121,6 +123,17 @@ def gen_graphs(cfg, graph_data, model):
             filename = f'graphs/graph_{i+1}_logits.pkl'
 
         pickle.dump(adj_recon, open(filename, 'wb'))
+
+
+def update_edge(data, adj_matrix):
+    edge_idx_update = []
+    for i in range(adj_matrix.shape[0]):
+        for j in range(adj_matrix.shape[1]):
+            if adj_matrix[i][j] > 0:
+                edge_idx_update.append([i, j])
+    edge_idx_update = np.array(edge_idx_update)
+    data.edge_index = torch.tensor(edge_idx_update).permute(1, 0).contiguous()
+    return data
 
 
 def to_submission(path="data\data_augmented.pt"):

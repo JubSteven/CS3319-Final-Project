@@ -100,14 +100,14 @@ def train_model(cfg, graph_data, model):
 
 
 # remove_pct and add_pct are two hyperparameters that control the number of edges to be removed and added
-def sample_graph_det(adj_orig, A_pred, remove_pct=20, add_pct=20):
-    if remove_pct == 0 and add_pct == 0:
+def sample_graph_det(adj_orig, A_pred, remove_percentage=5, add_percentage=5):
+    if remove_percentage == 0 and add_percentage == 0:
         return copy.deepcopy(adj_orig)
     orig_upper = sp.triu(adj_orig, 1)
     n_edges = orig_upper.nnz
     edges = np.asarray(orig_upper.nonzero()).T
-    if remove_pct:
-        n_remove = int(n_edges * remove_pct / 100)
+    if remove_percentage:
+        n_remove = int(n_edges * remove_percentage / 100)
         pos_probs = A_pred[edges.T[0], edges.T[1]]
         e_index_2b_remove = np.argpartition(pos_probs, n_remove)[:n_remove]
         mask = np.ones(len(edges), dtype=bool)
@@ -116,8 +116,8 @@ def sample_graph_det(adj_orig, A_pred, remove_pct=20, add_pct=20):
     else:
         edges_pred = edges
 
-    if add_pct:
-        n_add = int(n_edges * add_pct / 100)
+    if add_percentage:
+        n_add = int(n_edges * add_percentage / 100)
         # deep copy to avoid modifying A_pred
         A_probs = np.array(A_pred)
         # make the probabilities of the lower half to be zero (including diagonal)

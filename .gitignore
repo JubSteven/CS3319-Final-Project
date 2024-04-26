@@ -1,2 +1,6 @@
 *.csv
 /submissions
+*.png
+/img
+/.vscode
+/graphs

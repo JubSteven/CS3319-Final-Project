@@ -14,6 +14,7 @@ def get_scores(edges_pos, edges_neg, A_pred, adj_label):
     # get logits and labels
     preds_pos = A_pred[edges_pos[:, 0], edges_pos[:, 1]]
     preds_neg = A_pred[edges_neg[:, 0], edges_neg[:, 1]]
+
     logits = np.hstack([preds_pos, preds_neg])
     labels = np.hstack([np.ones(preds_pos.size(0)), np.zeros(preds_neg.size(0))])
 
@@ -81,8 +82,6 @@ def train_model(cfg, graph_data, model):
             best_vali_criterion = r[cfg["criterion"]]
             best_state_dict = copy.deepcopy(model.state_dict())
             r_test = r
-            # print("test_roc: {:.4f} test_ap: {:.4f} test_f1: {:.4f} test_recon_acc: {:.4f}".format(
-            #     r_test['roc'], r_test['ap'], r_test['f1'], r_test['acc']))
 
         loss.backward()
         optimizer.step()

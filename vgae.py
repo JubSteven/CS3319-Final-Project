@@ -7,13 +7,13 @@ from torch_geometric.nn import GCNConv
 import numpy as np
 
 
-class GVAE(nn.Module):
+class VGAE(nn.Module):
     """
         The GVAE is adapted from https://github.com/zhao-tong/GAug/blob/master/vgae/models.py
     """
 
     def __init__(self, adj, dim_in, dim_h, dim_z, use_gae=False):
-        super(GVAE, self).__init__()
+        super(VGAE, self).__init__()
         self.dim_z = dim_z
         self.gae = use_gae
         self.base_gcn = GraphConvSparse(dim_in, dim_h, adj)

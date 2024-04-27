@@ -10,6 +10,9 @@ graph_files = os.listdir("graphs")
 data_loader = GraphData("data\data.pt")
 
 for file in graph_files:
+    if "logits" not in file:
+        continue
+
     with open(os.path.join("graphs", file), "rb") as f:
         adj = pickle.load(f)
 

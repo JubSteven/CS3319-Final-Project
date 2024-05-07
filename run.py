@@ -1,7 +1,7 @@
 import pickle
 import os
 import torch
-from utils import sample_graph_det
+from utils import sample_graph_det, to_submission
 from baseline import inference_wrapper
 from dataset import *
 

@@ -75,14 +75,15 @@ def print_eval_result(eval_result, prefix=''):
           f"Val Acc:{eval_result['val_acc']*100:6.2f} | ")
 
 
-def train_warpper(data,
+def train_wrapper(data,
                   model,
                   max_epoches,
                   lr=0.001,
                   weight_decay=5e-4,
                   eval_interval=10,
                   early_stopping=100,
-                  early_stopping_tolerance=1):
+                  early_stopping_tolerance=1,
+                  save_path="models/model.pt"):
     model.reset_parameters()
     opt = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     best_val_acc = 0
@@ -105,7 +106,7 @@ def train_warpper(data,
     train_time = time.time() - start_time
     model.load_state_dict(best_model_param)
     # Dump the best model
-    torch.save(model.state_dict(), 'model.pt')
+    torch.save(model.state_dict(), save_path)
     eval_result = val(data, model)
     print_eval_result(eval_result, prefix=f'[Final Result] Time: {train_time:.2f}s |')
 
@@ -131,4 +132,12 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     data.to(device)
-    train_warpper(data, model, max_epoches=800, lr=0.0002, weight_decay=0.0005, eval_interval=20, early_stopping=100)
+    for i in range(1, 10):
+        train_wrapper(data,
+                      model,
+                      max_epoches=800,
+                      lr=0.0002,
+                      weight_decay=0.0005,
+                      eval_interval=20,
+                      early_stopping=100,
+                      save_path=f'models/model_{i}.pt')

@@ -89,11 +89,14 @@ def train_wrapper(data,
     best_val_acc = 0
     val_acc_history = []
     start_time = time.time()
-    for epoch in tqdm(range(1, max_epoches + 1)):
+    bar = tqdm(range(1, max_epoches + 1))
+    for epoch in bar:
         loss = train(data, model, opt)
         if epoch % eval_interval == 0:
             eval_result = val(data, model)
-            print_eval_result(eval_result, prefix=f'[Epoch {epoch:3d}/{max_epoches:3d}]')
+            bar.set_description(
+                f'E: {epoch:3d} | L: {loss.item():.4f} | TR_ACC: {eval_result["train_acc"]:.4f} | VA_ACC: {eval_result["val_acc"]:.4f}'
+            )
             if eval_result['val_acc'] > best_val_acc:
                 best_val_acc = eval_result['val_acc']
                 best_model_param = copy.deepcopy(model.state_dict())
@@ -108,7 +111,7 @@ def train_wrapper(data,
     # Dump the best model
     torch.save(model.state_dict(), save_path)
     eval_result = val(data, model)
-    print_eval_result(eval_result, prefix=f'[Final Result] Time: {train_time:.2f}s |')
+    # print_eval_result(eval_result, prefix=f'[Final Result] Time: {train_time:.2f}s |')
 
 
 def inference_wrapper(data, model_path='model.pt'):

@@ -6,3 +6,4 @@
 /graphs
 *.pyc
 *.zip
+aug_model.pt

@@ -38,7 +38,12 @@ class VGAE(nn.Module):
         A_pred = Z @ Z.T
         return A_pred
 
-    def forward(self, X):
+    def forward(self, X, F=None):
+        if F is not None:
+            # TODO design different fusing strategies
+            if isinstance(F, np.ndarray):
+                F = torch.from_numpy(F).float().to(X.device)
+            X = torch.cat([X, F], dim=1)
         Z = self.encode(X)
         A_pred = self.decode(Z)
         return A_pred

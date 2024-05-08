@@ -9,7 +9,7 @@ raw_data = torch.load("data\data.pt")
 data_loader = GraphData("data\data.pt")
 model_path = os.listdir("models")
 
-graph_aug = "graph_2_logits.pkl"  # NOTE: You can change this to a different graph
+graph_aug = "graph_10_logits.pkl"  # NOTE: You can change this to a different graph
 
 with open(os.path.join("graphs", graph_aug), "rb") as f:
     adj = pickle.load(f)
@@ -21,7 +21,7 @@ remove_edges = [100, 200, 300, 400, 500, 600]
 edge_list = []
 means = []
 for enum in remove_edges:
-    edges = sample_graph_det(data_loader.adj_train.to_dense().numpy(), adj, enum)
+    edges = sample_graph_det(data_loader.adj_train_norm.to_dense().numpy(), adj, enum)
     raw_data.edge_index = torch.from_numpy(edges.T)
 
     val_acc = []

@@ -8,6 +8,7 @@ from sklearn.metrics import roc_auc_score, average_precision_score, precision_re
 import torch.nn.functional as F
 import pickle
 from tqdm import tqdm
+import networkx as nx
 
 
 def get_scores(edges_pos, edges_neg, A_pred, adj_label):
@@ -50,54 +51,6 @@ def get_scores(edges_pos, edges_neg, A_pred, adj_label):
     return results
 
 
-def train_model(cfg, graph_data, model):
-    optimizer = torch.optim.Adam(model.parameters(), lr=cfg["lr"])
-    # weights for log_lik loss
-    adj_t = graph_data.adj_train
-    norm_w = adj_t.shape[0]**2 / float((adj_t.shape[0]**2 - adj_t.sum()) * 2)
-    pos_weight = torch.FloatTensor([float(adj_t.shape[0]**2 - adj_t.sum()) / adj_t.sum()]).to(cfg["device"])
-
-    # move input data and label to gpu if needed
-    features = graph_data.x.to(cfg["device"])
-    adj_label = graph_data.adj_label.to_dense().to(cfg["device"])
-
-    best_vali_criterion = 0.0
-    best_state_dict = None
-    model.train()
-
-    train_bar = tqdm(range(cfg["epoch"]))
-    for epoch in train_bar:
-        A_pred = model(features)
-        optimizer.zero_grad()
-        loss = norm_w * F.binary_cross_entropy_with_logits(A_pred, adj_label, pos_weight=pos_weight)
-        if not cfg["use_gae"]:
-            kl_divergence = 0.5 / A_pred.size(0) * (1 + 2 * model.logstd - model.mean**2 -
-                                                    torch.exp(2 * model.logstd)).sum(1).mean()
-            loss -= kl_divergence
-
-        A_pred = torch.sigmoid(A_pred).detach().cpu()
-        r = get_scores(graph_data.val_edges, graph_data.val_edges_false, A_pred, graph_data.adj_label)
-
-        if r[cfg["criterion"]] > best_vali_criterion:
-            best_vali_criterion = r[cfg["criterion"]]
-            best_state_dict = copy.deepcopy(model.state_dict())
-            r_test = r
-
-        loss.backward()
-        optimizer.step()
-        train_bar.set_description(
-            f"E: {epoch+1} | L: {loss.item():.4f} | A: {r['acc']:.4f} | ROC: {r['roc']:.4f} | AP: {r['ap']:.4f} | F1: {r['f1']:.4f}"
-        )
-
-    print("Training completed. Final results: test_roc: {:.4f} test_ap: {:.4f} test_f1: {:.4f} test_recon_acc: {:.4f}".
-          format(r_test['roc'], r_test['ap'], r_test['f1'], r_test['acc']))
-
-    model.load_state_dict(best_state_dict)
-    # Dump the best model
-    torch.save(model.state_dict(), f'models/model.pth')
-    return model
-
-
 # remove_pct and add_pct are two hyperparameters that control the number of edges to be removed and added
 def sample_graph_det(adj_orig, A_pred, remove_edge_num=100):
     if remove_edge_num == 0:
@@ -120,31 +73,6 @@ def sample_graph_det(adj_orig, A_pred, remove_edge_num=100):
     return edges_pred
 
 
-def gen_graphs(cfg, graph_data, model):
-    adj_orig = graph_data.adj_train
-
-    if cfg["use_gae"]:
-        pickle.dump(adj_orig, open(f'graphs/graph_0_gae.pkl', 'wb'))
-    else:
-        pickle.dump(adj_orig, open(f'graphs/graph_0.pkl', 'wb'))
-
-    features = graph_data.x.to(cfg["device"])
-    for i in range(cfg["gen_graphs"]):
-        with torch.no_grad():
-            A_pred = model(features)
-
-        A_pred = torch.sigmoid(A_pred).detach().cpu()
-        adj_recon = A_pred.numpy()
-        np.fill_diagonal(adj_recon, 0)
-
-        if cfg["use_gae"]:
-            filename = f'graphs/graph_{i+1}_logits_gae.pkl'
-        else:
-            filename = f'graphs/graph_{i+1}_logits.pkl'
-
-        pickle.dump(adj_recon, open(filename, 'wb'))
-
-
 def update_edge(data, adj_matrix):
     edge_idx_update = adj_matrix.indices
     data.edge_index = edge_idx_update
@@ -158,6 +86,55 @@ def to_submission(path="data\data_augmented.pt"):
     df = pd.DataFrame(edge_index)
     df.insert(0, 'ID', [0])
     df.to_csv('submission.csv', index=False)
+
+
+def get_basic_graph_features(adj):
+    """
+    Node degree, node centrality, node clustering coefficient, shortest path length, Jacard similarity, Katz index
+    """
+    if isinstance(adj, torch.Tensor):
+        adj = adj.to_dense().numpy()
+    else:
+        adj = np.array(adj)
+
+    # Convert the adjacency matrix to a NetworkX graph
+    graph = nx.from_numpy_array(adj)
+
+    degree = np.array(list(dict(graph.degree()).values()))  # Node degree
+
+    centrality = np.array(list(nx.degree_centrality(graph).values()))  # Node centrality (using degree centrality)
+
+    clustering_coefficient = np.array(list(nx.clustering(graph).values()))  # Node clustering coefficient
+
+    # shortest_path_length = nx.floyd_warshall_numpy(graph)  # Shortest path length
+    # shortest_path_length = np.array([[shortest_path_length[u][v] for v in graph.nodes()] for u in graph.nodes()])
+
+    jacard_similarity = np.zeros(
+        (len(graph.nodes()), len(graph.nodes())))  # Jacard similarity (assuming the graph is undirected)
+    for u, v, j in nx.jaccard_coefficient(graph):
+        jacard_similarity[u][v] = j
+        jacard_similarity[v][u] = j
+
+    katz_index = nx.katz_centrality_numpy(graph)  # TODO: perhaps wrong, not Katz index
+    katz_index = np.array(list(katz_index.values()))
+
+    # Create a dictionary containing the calculated features
+    node_level_feats = {
+        'degree': degree,
+        'centrality': centrality,
+        'clustering_coefficient': clustering_coefficient,
+        # 'shortest_path_length': shortest_path_length,
+        # 'jacard_similarity': jacard_similarity,
+        'katz_index': katz_index
+    }
+
+    # TODO: add edge-level features
+    edge_level_feats = None
+
+    # TODO: merge the features into a single feature matrix, or design an NN to fuse the features
+    features = np.concatenate([node_level_feats[key].reshape(-1, 1) for key in node_level_feats], axis=1)
+
+    return features
 
 
 if __name__ == "__main__":

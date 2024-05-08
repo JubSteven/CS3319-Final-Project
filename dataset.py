@@ -24,7 +24,7 @@ class GraphData():
         self.train_edges = self.edge_index
         # ! self.x ought to be modified if train_edges is not all edges
         self.adj_train = self.build_adj(self.train_edges, self.x.shape[0]).numpy()
-        self.adj_train = self.normalize_adj(self.adj_train)
+        self.adj_train_norm = self.normalize_adj(self.adj_train)
 
         # ! self.x ought to be modified if train_edges is not all edges
         self.adj_label = self.build_adj_label(self.train_edges, self.x.shape[0])
@@ -41,7 +41,7 @@ class GraphData():
         while len(false_edges) < num_edges:
             src_node = np.random.randint(0, self.x.shape[0])
             dst_node = np.random.randint(0, self.x.shape[0])
-            if src_node != dst_node and not self.adj_train[src_node, dst_node]:
+            if src_node != dst_node and not self.adj_train_norm[src_node, dst_node]:
                 false_edges.add((src_node, dst_node))
 
         false_edges = torch.tensor(list(false_edges)).to(self.device)

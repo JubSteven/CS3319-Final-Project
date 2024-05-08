@@ -8,7 +8,7 @@ from dataset import *
 raw_data = torch.load("data\data.pt")
 data_loader = GraphData("data\data.pt")
 
-graph_aug = "graph_3_logits.pkl"  # You can change this to a different graph
+graph_aug = "graph_1_logits_gae.pkl"  # NOTE: You can change this to a different graph
 
 with open(os.path.join("graphs", graph_aug), "rb") as f:
     adj = pickle.load(f)
@@ -23,6 +23,7 @@ for enum in remove_edges:
 
     edge_list.append(edges.T.reshape(-1).tolist())
 
+# NOTE: Don't change this, used for generating the submission csv
 df = pd.DataFrame(edge_list).fillna(-1).astype(int)
 # fill those empty units with -1 (don't change it)
 df.insert(0, 'ID', list(range(len(edge_list))))

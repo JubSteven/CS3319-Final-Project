@@ -21,6 +21,7 @@ class VGAE(nn.Module):
         self.gcn_logstd = GraphConvSparse(dim_h, dim_z, adj, activation=False)
 
     def encode(self, X):
+        # TODO: modify X to fuse basic graph features
         hidden = self.base_gcn(X)
         self.mean = self.gcn_mean(hidden)
         if self.gae:

@@ -9,7 +9,7 @@ from dataset import *
 
 
 def train(data_path, cfg):
-    graph_data = GraphData(data_path, cfg["device"])
+    graph_data = GraphData(data_path, cfg["device"])  # TODO: validate the correctness of the dataloader
     model = VGAE(graph_data.adj_train, graph_data.x.shape[1], cfg["dim_h"], cfg["dim_z"],
                  use_gae=cfg["use_gae"]).to(cfg["device"])
     if cfg["pretrained"]:
@@ -32,7 +32,7 @@ if __name__ == "__main__":
         "lr": 0.01,
         "epoch": 200,
         "device": "cuda" if torch.cuda.is_available() else "cpu",
-        "use_gae": True,
+        "use_gae": False,
         "criterion": "roc",
         "gen_graphs": 10,
     }

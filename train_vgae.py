@@ -109,8 +109,8 @@ if __name__ == "__main__":
         "lr": 0.01,
         "epoch": 200,
         "device": "cuda" if torch.cuda.is_available() else "cpu",
-        "use_gae": False,
+        "use_gae": True,
         "criterion": "roc",
-        "gen_graphs": 10,
+        "gen_graphs": 1,
     }
     main(data_path="data\data.pt", cfg=cfg)

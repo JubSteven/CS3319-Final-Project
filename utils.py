@@ -51,7 +51,6 @@ def get_scores(edges_pos, edges_neg, A_pred, adj_label):
     return results
 
 
-# remove_pct and add_pct are two hyperparameters that control the number of edges to be removed and added
 def sample_graph_det(adj_orig, A_pred, remove_edge_num=100):
     if remove_edge_num == 0:
         return copy.deepcopy(adj_orig)
@@ -60,9 +59,9 @@ def sample_graph_det(adj_orig, A_pred, remove_edge_num=100):
     if remove_edge_num:
         n_remove = remove_edge_num
         pos_probs = A_pred[edges.T[0], edges.T[1]]
-        e_index_2b_remove = np.argpartition(pos_probs, n_remove)[:n_remove]
+        edge_index_to_remove = np.argpartition(pos_probs, n_remove)[:n_remove]
         mask = np.ones(len(edges), dtype=bool)
-        mask[e_index_2b_remove] = False
+        mask[edge_index_to_remove] = False
         edges_pred = edges[mask]
     else:
         edges_pred = edges
@@ -73,22 +72,22 @@ def sample_graph_det(adj_orig, A_pred, remove_edge_num=100):
     return edges_pred
 
 
-def update_edge(data, adj_matrix):
-    edge_idx_update = adj_matrix.indices
-    data.edge_index = edge_idx_update
-    return data
+# def sample_graph_ewm(adj_orig, A_pred, remove_edge_num=100):
+#     basic_graph_feats = get_basic_graph_features(adj_orig, return_dict=True)
+#     print(basic_graph_feats.keys())
+#     print(basic_graph_feats['degree_edge'].shape)
+#     assert False
+#     # basic_graph_feats = (basic_graph_feats - basic_graph_feats.mean(axis=0)) / basic_graph_feats.std(axis=0)
+
+#     orig_upper = sp.triu(adj_orig, 1)
+#     edges = np.asarray(orig_upper.nonzero()).T
+
+#     print(basic_graph_feats.shape)
+#     print(A_pred.shape)
+#     assert False
 
 
-def to_submission(path="data\data_augmented.pt"):
-    data = torch.load(path)
-    edge_index = data.edge_index
-    edge_index = edge_index.numpy().reshape(1, -1)
-    df = pd.DataFrame(edge_index)
-    df.insert(0, 'ID', [0])
-    df.to_csv('submission.csv', index=False)
-
-
-def get_basic_graph_features(adj):
+def get_basic_graph_features(adj, return_dict=False):
     """
     Node degree, node centrality, node clustering coefficient, shortest path length, Jacard similarity, Katz index
     """
@@ -129,13 +128,19 @@ def get_basic_graph_features(adj):
     }
 
     # TODO: add edge-level features
-    edge_level_feats = None
+    edge_level_feats = {}
+    # Take the average of node_level_feats between the two nodes of an edge
+    for key in node_level_feats:
+        edge_key = key + '_edge'
+        edge_level_feats[edge_key] = np.array(
+            [node_level_feats[key][u] + node_level_feats[key][v] for u, v in graph.edges()])
+        edge_level_feats[edge_key] /= 2
+
+    feats_dict = {**node_level_feats, **edge_level_feats}
+    if return_dict:
+        return feats_dict
 
     # TODO: merge the features into a single feature matrix, or design an NN to fuse the features
     features = np.concatenate([node_level_feats[key].reshape(-1, 1) for key in node_level_feats], axis=1)
 
     return features
-
-
-if __name__ == "__main__":
-    to_submission()

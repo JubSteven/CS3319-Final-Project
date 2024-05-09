@@ -129,12 +129,12 @@ def get_basic_graph_features(adj, return_dict=False):
 
     # TODO: add edge-level features
     edge_level_feats = {}
-    # Take the average of node_level_feats between the two nodes of an edge
-    for key in node_level_feats:
-        edge_key = key + '_edge'
-        edge_level_feats[edge_key] = np.array(
-            [node_level_feats[key][u] + node_level_feats[key][v] for u, v in graph.edges()])
-        edge_level_feats[edge_key] /= 2
+    # # Take the average of node_level_feats between the two nodes of an edge
+    # for key in node_level_feats:
+    #     edge_key = key + '_edge'
+    #     edge_level_feats[edge_key] = np.array(
+    #         [node_level_feats[key][u] + node_level_feats[key][v] for u, v in graph.edges()])
+    #     edge_level_feats[edge_key] /= 2
 
     feats_dict = {**node_level_feats, **edge_level_feats}
     if return_dict:

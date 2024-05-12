@@ -9,7 +9,7 @@ raw_data = torch.load("data\data.pt")
 data_loader = GraphData("data\data.pt")
 model_path = os.listdir("models")
 
-graph_aug = "graph_1_logits_gae.pkl"  # NOTE: You can change this to a different graph
+graph_aug = "graph_1_logits.pkl"  # NOTE: You can change this to a different graph
 
 with open(os.path.join("graphs", graph_aug), "rb") as f:
     adj = pickle.load(f)

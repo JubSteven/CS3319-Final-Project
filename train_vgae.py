@@ -86,7 +86,7 @@ def main(data_path, cfg):
 
     model = VGAE(
         adj=graph_data.adj_train_norm,
-        adj_louvain=graph_data.adj_train_louvain if cfg["use_louvain"] else None,
+        adj_louvain=graph_data.adj_train_louvain_norm if cfg["use_louvain"] else None,
         dim_in=graph_data.x.shape[1],
         dim_h=cfg["dim_h"],
         dim_z=cfg["dim_z"],

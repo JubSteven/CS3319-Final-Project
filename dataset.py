@@ -33,6 +33,7 @@ class GraphData():
             self.adj_train_louvain = self.adj_train + self.louvain_adj * self.louvain_lambda
 
         self.adj_train_norm = self.normalize_adj(self.adj_train)
+        self.adj_train_louvain_norm = self.normalize_adj(self.adj_train_louvain)
 
         # ! self.x ought to be modified if train_edges is not all edges
         self.adj_label = self.build_adj_label(self.train_edges, self.x.shape[0])

@@ -1,7 +1,7 @@
 import torch
 import torch_geometric.transforms as T
 import networkx as nx
-import community
+import community as cm
 import matplotlib.pyplot as plt
 import random
 
@@ -14,7 +14,7 @@ graph = nx.Graph()
 graph.add_edges_from(edge_index.t().tolist())
 
 # Perform community detection using the Louvain algorithm
-partition = community.best_partition(graph)
+partition = cm.best_partition(graph)
 
 # Choose the number of nodes to sample
 num_nodes_to_sample = 500

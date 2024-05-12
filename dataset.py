@@ -4,9 +4,12 @@ from utils import *
 
 class GraphData():
 
-    def __init__(self, data_path, device="cpu"):
+    def __init__(self, data_path, device="cpu", use_louvain=True, louvain_neighbors=10, louvain_lambda=0.5):
         self.data = torch.load(data_path)
         self.device = device
+        self.use_louvain = use_louvain
+        self.louvain_neighbors = louvain_neighbors
+        self.louvain_lambda = louvain_lambda
         self.init_data()
 
     def init_data(self):
@@ -24,6 +27,11 @@ class GraphData():
         self.train_edges = self.edge_index
         # ! self.x ought to be modified if train_edges is not all edges
         self.adj_train = self.build_adj(self.train_edges, self.x.shape[0]).numpy()
+
+        if self.use_louvain:
+            self.louvain_adj, _, _ = louvain_clustering(self.adj_train, self.louvain_neighbors)
+            self.adj_train_louvain = self.adj_train + self.louvain_adj * self.louvain_lambda
+
         self.adj_train_norm = self.normalize_adj(self.adj_train)
 
         # ! self.x ought to be modified if train_edges is not all edges

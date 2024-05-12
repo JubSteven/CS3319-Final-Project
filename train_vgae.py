@@ -10,7 +10,6 @@ from dataset import *
 
 def train_model(cfg, graph_data, model, structural_features=None):
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg["lr"])
-    # weights for log_lik loss
     adj_t = graph_data.adj_train
     norm_w = adj_t.shape[0]**2 / float((adj_t.shape[0]**2 - adj_t.sum()) * 2)
     pos_weight = torch.FloatTensor([float(adj_t.shape[0]**2 - adj_t.sum()) / adj_t.sum()]).to(cfg["device"])
@@ -83,20 +82,25 @@ def gen_graphs(cfg, graph_data, model, structural_features=None):
 
 def main(data_path, cfg):
     graph_data = GraphData(data_path, cfg["device"])  # TODO: validate the correctness of the dataloader
-    structural_features = get_basic_graph_features(graph_data.adj_train)
-    model = VGAE(adj=graph_data.adj_train_norm,
-                 dim_in=graph_data.x.shape[1] + structural_features.shape[1],
-                 dim_h=cfg["dim_h"],
-                 dim_z=cfg["dim_z"],
-                 use_gae=cfg["use_gae"]).to(cfg["device"])
+    # structural_features = get_basic_graph_features(graph_data.adj_train)
+
+    model = VGAE(
+        adj=graph_data.adj_train_norm,
+        adj_louvain=graph_data.adj_train_louvain if cfg["use_louvain"] else None,
+        dim_in=graph_data.x.shape[1],
+        dim_h=cfg["dim_h"],
+        dim_z=cfg["dim_z"],
+        use_gae=cfg["use_gae"],
+    ).to(cfg["device"])
+
     if cfg["pretrained"]:
         model.load_state_dict(torch.load(cfg["pretrained"]))
     else:
-        model = train_model(cfg, graph_data, model, structural_features)
+        model = train_model(cfg, graph_data, model)
 
     if cfg["gen_graphs"] > 0:
         # Generate graphs
-        gen_graphs(cfg, graph_data, model, structural_features)
+        gen_graphs(cfg, graph_data, model)
 
 
 if __name__ == "__main__":
@@ -112,5 +116,6 @@ if __name__ == "__main__":
         "use_gae": True,
         "criterion": "roc",
         "gen_graphs": 1,
+        "use_louvain": True,
     }
     main(data_path="data\data.pt", cfg=cfg)

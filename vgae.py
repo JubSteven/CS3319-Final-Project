@@ -12,11 +12,16 @@ class VGAE(nn.Module):
         The GVAE is adapted from https://github.com/zhao-tong/GAug/blob/master/vgae/models.py
     """
 
-    def __init__(self, adj, dim_in, dim_h, dim_z, use_gae=False):
+    def __init__(self, adj, dim_in, dim_h, dim_z, use_gae=False, adj_louvain=None):
         super(VGAE, self).__init__()
+
         self.dim_z = dim_z
         self.gae = use_gae
-        self.base_gcn = GraphConvSparse(dim_in, dim_h, adj)
+        if adj_louvain is not None:
+            self.base_gcn = GraphConvSparse(dim_in, dim_h, adj_louvain)
+        else:
+            self.base_gcn = GraphConvSparse(dim_in, dim_h, adj)
+
         self.gcn_mean = GraphConvSparse(dim_h, dim_z, adj, activation=False)
         self.gcn_logstd = GraphConvSparse(dim_h, dim_z, adj, activation=False)
 

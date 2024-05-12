@@ -7,3 +7,4 @@
 *.pyc
 *.zip
 aug_model.pt
+/misc

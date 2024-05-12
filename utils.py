@@ -72,21 +72,6 @@ def sample_graph_det(adj_orig, A_pred, remove_edge_num=100):
     return edges_pred
 
 
-# def sample_graph_ewm(adj_orig, A_pred, remove_edge_num=100):
-#     basic_graph_feats = get_basic_graph_features(adj_orig, return_dict=True)
-#     print(basic_graph_feats.keys())
-#     print(basic_graph_feats['degree_edge'].shape)
-#     assert False
-#     # basic_graph_feats = (basic_graph_feats - basic_graph_feats.mean(axis=0)) / basic_graph_feats.std(axis=0)
-
-#     orig_upper = sp.triu(adj_orig, 1)
-#     edges = np.asarray(orig_upper.nonzero()).T
-
-#     print(basic_graph_feats.shape)
-#     print(A_pred.shape)
-#     assert False
-
-
 def get_basic_graph_features(adj, return_dict=False):
     """
     Node degree, node centrality, node clustering coefficient, shortest path length, Jacard similarity, Katz index

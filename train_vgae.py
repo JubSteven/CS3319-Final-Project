@@ -81,6 +81,8 @@ def gen_graphs(cfg, graph_data, model, structural_features=None):
 
 
 def main(data_path, cfg):
+    torch.manual_seed(cfg["seed"])
+
     graph_data = GraphData(data_path, cfg["device"])  # TODO: validate the correctness of the dataloader
     # structural_features = get_basic_graph_features(graph_data.adj_train)
 
@@ -113,9 +115,10 @@ if __name__ == "__main__":
         "lr": 0.01,
         "epoch": 200,
         "device": "cuda" if torch.cuda.is_available() else "cpu",
-        "use_gae": True,
+        "use_gae": False,
         "criterion": "roc",
-        "gen_graphs": 1,
+        "gen_graphs": 10,
         "use_louvain": True,
+        "seed": 42
     }
     main(data_path="data\data.pt", cfg=cfg)

@@ -21,7 +21,7 @@ def remove_duplicate_edges(edge_list):
 
 
 plt_communities_full = []
-num_runs = 5
+num_runs = 6
 for i in range(1, num_runs + 1):
     graph_data = GraphData("data\data.pt")
     graph = nx.Graph(graph_data.adj_train)
@@ -49,7 +49,7 @@ for i in range(1, num_runs + 1):
 
     targ_edges = [remove_duplicate_edges(each) for each in deleted_edges]
 
-    plt_edges = targ_edges[1]
+    plt_edges = targ_edges[-1]
     # Check the community of the edge nodes and count the number of communities
     plt_communities = []
     for edge in plt_edges:
@@ -68,7 +68,7 @@ plt.hist(plt_communities_full, bins=nb_communities_louvain)
 plt.xlabel("Community Index")
 plt.ylabel("Number of Nodes")
 plt.title("Communities of nodes from 600 deleted edges")
-plt.legend(["Acc 80.02", "Acc 79.97", "Acc 79.43", "Acc 78.98"])
+plt.legend(["Acc 80.02", "Acc 79.97", "Acc 79.43", "Acc 78.98", "Test", "Acc 80.20"])
 plt.show()
 assert False
 

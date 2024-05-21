@@ -23,7 +23,7 @@ def from_graph():
     edge_list = []
     means = []
     for enum in remove_edges:
-        edges = sample_graph_community(data_loader.adj_train, adj, enum, tau=0.18)
+        edges = sample_graph_community(data_loader.adj_train, adj, enum, tau=0.01)
         raw_data.edge_index = torch.from_numpy(edges.T)
 
         val_acc = []

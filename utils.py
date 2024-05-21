@@ -73,19 +73,21 @@ def sample_graph_det(adj_orig, A_pred, remove_edge_num=100):
     return edges_pred
 
 
-def sample_graph_community(adj_orig, A_pred, remove_edge_num=100, tau=0.1):
+def sample_graph_community(adj_orig, A_pred, remove_edge_num=100, tau=0.05):
     if remove_edge_num == 0:
         return copy.deepcopy(adj_orig)
     orig_upper = sp.triu(adj_orig, 1)
     edges = np.asarray(orig_upper.nonzero()).T
     partition = cm.best_partition(nx.Graph(adj_orig), random_state=42)
+    # Get the indices for each community index
+    community_indices = [np.where(np.array(list(partition.values())) == i)[0] for i in set(partition.values())]
 
     if remove_edge_num:
         n_remove = remove_edge_num
         # Create a list storing the current weight of each node
         node_count = np.zeros(len(partition))
         edge_index_to_remove = []
-        for _ in range(n_remove):
+        for _ in tqdm(range(n_remove)):
             # Find the edge with the smallest probability
             edge_prob = A_pred[edges.T[0], edges.T[1]]
             remaining_edges = [idx for idx in np.argsort(edge_prob) if idx not in edge_index_to_remove]
@@ -98,13 +100,19 @@ def sample_graph_community(adj_orig, A_pred, remove_edge_num=100, tau=0.1):
             community_i = partition[min_edge[0]]
             community_j = partition[min_edge[1]]
 
+            # print("Edge: ", min_edge, " Communities: ", community_i, community_j, " Prob: ", edge_prob[min_edge_idx])
+
             # Compute the penalty term
             penalty_i = node_count[community_i] / (2 * n_remove)
             penalty_j = node_count[community_j] / (2 * n_remove)
 
-            # Update the rows i and j in the A_pred matrix with the penalty term
-            A_pred[min_edge[0], :] *= (1 + penalty_i * tau)
-            A_pred[min_edge[1], :] *= (1 + penalty_j * tau)
+            # Update the probability of all nodes within the same community as community_i and community_j
+            A_pred[community_indices[community_i], :] += (1 -
+                                                          A_pred[community_indices[community_i], :]) * penalty_i * tau
+            A_pred[community_indices[community_j], :] += (1 -
+                                                          A_pred[community_indices[community_j], :]) * penalty_j * tau
+            # A_pred[community_indices[community_i], :] *= (1 + penalty_i * tau)
+            # A_pred[community_indices[community_j], :] *= (1 + penalty_j * tau)
 
             # Add the edge index to the removal list
             edge_index_to_remove.append(min_edge_idx)
@@ -234,12 +242,6 @@ def get_basic_graph_features(adj, return_dict=False):
 
     # TODO: add edge-level features
     edge_level_feats = {}
-    # # Take the average of node_level_feats between the two nodes of an edge
-    # for key in node_level_feats:
-    #     edge_key = key + '_edge'
-    #     edge_level_feats[edge_key] = np.array(
-    #         [node_level_feats[key][u] + node_level_feats[key][v] for u, v in graph.edges()])
-    #     edge_level_feats[edge_key] /= 2
 
     feats_dict = {**node_level_feats, **edge_level_feats}
     if return_dict:

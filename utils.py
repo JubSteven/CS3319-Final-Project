@@ -73,7 +73,7 @@ def sample_graph_det(adj_orig, A_pred, remove_edge_num=100):
     return edges_pred
 
 
-def sample_graph_cluster(adj_orig, A_pred, remove_edge_num=100, tau=0.5):
+def sample_graph_community(adj_orig, A_pred, remove_edge_num=100, tau=0.1):
     if remove_edge_num == 0:
         return copy.deepcopy(adj_orig)
     orig_upper = sp.triu(adj_orig, 1)
@@ -82,15 +82,16 @@ def sample_graph_cluster(adj_orig, A_pred, remove_edge_num=100, tau=0.5):
 
     if remove_edge_num:
         n_remove = remove_edge_num
-        edge_prob = A_pred[edges.T[0], edges.T[1]]
-
         # Create a list storing the current weight of each node
         node_count = np.zeros(len(partition))
         edge_index_to_remove = []
         for _ in range(n_remove):
             # Find the edge with the smallest probability
             edge_prob = A_pred[edges.T[0], edges.T[1]]
-            min_edge_idx = np.argmin(edge_prob)
+            remaining_edges = [idx for idx in np.argsort(edge_prob) if idx not in edge_index_to_remove]
+            if len(remaining_edges) == 0:
+                break
+            min_edge_idx = remaining_edges[0]
             min_edge = edges[min_edge_idx]
 
             # Get the communities of the two nodes
@@ -98,12 +99,12 @@ def sample_graph_cluster(adj_orig, A_pred, remove_edge_num=100, tau=0.5):
             community_j = partition[min_edge[1]]
 
             # Compute the penalty term
-            penalty_i = node_count[community_i] / n_remove
-            penalty_j = node_count[community_j] / n_remove
+            penalty_i = node_count[community_i] / (2 * n_remove)
+            penalty_j = node_count[community_j] / (2 * n_remove)
 
             # Update the rows i and j in the A_pred matrix with the penalty term
-            A_pred[min_edge[0], :] *= (1 - penalty_i) * tau
-            A_pred[min_edge[1], :] *= (1 - penalty_j) * tau
+            A_pred[min_edge[0], :] *= (1 + penalty_i * tau)
+            A_pred[min_edge[1], :] *= (1 + penalty_j * tau)
 
             # Add the edge index to the removal list
             edge_index_to_remove.append(min_edge_idx)
@@ -112,14 +113,12 @@ def sample_graph_cluster(adj_orig, A_pred, remove_edge_num=100, tau=0.5):
             node_count[community_i] += 1
             node_count[community_j] += 1
 
-        print(edge_index_to_remove)
         # Remove the edges with the smallest probabilities
         edges_pred = np.delete(edges, edge_index_to_remove, axis=0)
     else:
         edges_pred = edges
 
     edges_pred = np.concatenate([edges_pred, edges_pred[:, ::-1]])
-    print(edges_pred.shape)
 
     return edges_pred
 

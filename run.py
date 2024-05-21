@@ -1,7 +1,7 @@
 import pickle
 import os
 import torch
-from utils import sample_graph_det
+from utils import sample_graph_det, sample_graph_community
 from baseline import inference_wrapper
 from dataset import *
 
@@ -11,7 +11,7 @@ def from_graph():
     data_loader = GraphData("data\data.pt")
     model_path = os.listdir("models")
 
-    graph_aug = "graph_4_logits.pkl"  # NOTE: You can change this to a different graph
+    graph_aug = "graph_1_logits.pkl"  # NOTE: You can change this to a different graph
 
     with open(os.path.join("graphs", graph_aug), "rb") as f:
         adj = pickle.load(f)
@@ -23,7 +23,7 @@ def from_graph():
     edge_list = []
     means = []
     for enum in remove_edges:
-        edges = sample_graph_det(data_loader.adj_train, adj, enum)
+        edges = sample_graph_community(data_loader.adj_train, adj, enum, tau=0.18)
         raw_data.edge_index = torch.from_numpy(edges.T)
 
         val_acc = []
@@ -72,5 +72,5 @@ def from_submission():
 
 
 if __name__ == "__main__":
-    # from_graph()
-    from_submission()
+    from_graph()
+    # from_submission()

@@ -45,12 +45,17 @@ class GCN_Net(torch.nn.Module):
         return pred_loss
 
 
-def train(data, model, opt):
+def train(data, model, opt, use_val=False):
     model.train()
     opt.zero_grad()
     x, label, edge_index, train_mask = data.x, data.y, data.edge_index, data.train_mask
     pred = model(x, edge_index)
-    loss = model.loss(label, train_mask)
+    if not use_val:
+        loss = model.loss(label, train_mask)
+    else:
+        # merge the train_mask and the val_mask (combine the 1s)
+        merged_mask = torch.logical_or(train_mask, data.val_mask)
+        loss = model.loss(label, merged_mask)
     loss.backward()
     opt.step()
     return loss
@@ -83,6 +88,7 @@ def train_wrapper(data,
                   eval_interval=10,
                   early_stopping=100,
                   early_stopping_tolerance=1,
+                  use_val=False,
                   save_path="models/model.pt"):
     model.reset_parameters()
     opt = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
@@ -91,7 +97,7 @@ def train_wrapper(data,
     start_time = time.time()
     bar = tqdm(range(1, max_epoches + 1))
     for epoch in bar:
-        loss = train(data, model, opt)
+        loss = train(data, model, opt, use_val=use_val)
         if epoch % eval_interval == 0:
             eval_result = val(data, model)
             bar.set_description(
@@ -103,15 +109,15 @@ def train_wrapper(data,
             val_acc_history.append(eval_result['val_acc'])
             if early_stopping > 0 and len(val_acc_history) > early_stopping:
                 mean_val_acc = torch.tensor(val_acc_history[-(early_stopping + 1):-1]).mean().item()
-                if (eval_result['val_acc'] - mean_val_acc) * 100 < -early_stopping_tolerance:  # NOTE: in percentage
+                if (eval_result['val_acc'] - mean_val_acc) * 100 < -early_stopping_tolerance:
                     print('[Early Stop Info] Stop at Epoch: ', epoch)
                     break
-    train_time = time.time() - start_time
     model.load_state_dict(best_model_param)
     # Dump the best model
     torch.save(model.state_dict(), save_path)
     eval_result = val(data, model)
-    # print_eval_result(eval_result, prefix=f'[Final Result] Time: {train_time:.2f}s |')
+
+    return model
 
 
 def inference_wrapper(data, model_path='model.pt'):

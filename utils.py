@@ -109,11 +109,11 @@ def sample_graph_community(adj_orig, A_pred, remove_edge_num=100, tau=0.05):
             # print("Edge: ", min_edge, " Communities: ", community_i, community_j, " Prob: ", edge_prob[min_edge_idx])
 
             # Compute the penalty term
-            penalty_i = node_count[community_i] / (2 * n_remove)
-            penalty_j = node_count[community_j] / (2 * n_remove)
+            # penalty_i = node_count[community_i] / (2 * n_remove)
+            # penalty_j = node_count[community_j] / (2 * n_remove)
             
-            # penalty_i = node_count[community_i] / cm_size_dict[community_i]
-            # penalty_j = node_count[community_j] / cm_size_dict[community_j]
+            penalty_i = node_count[community_i] / cm_size_dict[community_i]
+            penalty_j = node_count[community_j] / cm_size_dict[community_j]
 
             # Update the probability of all nodes within the same community as community_i and community_j
             A_pred[community_indices[community_i], :] += (1 -

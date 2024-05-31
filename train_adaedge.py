@@ -5,6 +5,7 @@ from itertools import combinations
 import networkx as nx
 from tqdm import tqdm
 import math
+import numpy as np
 
 
 def inference(data, model):
@@ -35,11 +36,9 @@ def adjust_graph_topology(data, model_path='model.pt', threshold=0.15, edge_to_r
 
     # Adjust the graph topology
     G = to_networkx(data, to_undirected=True)
-    train_nodes = data.train_mask.nonzero(as_tuple=True)[0].tolist()  # Get list of training node indices
     all_nodes = list(G.nodes)
 
     # Track changes
-    edge_changes = False
     edges_removed = 0
 
     bar = tqdm(combinations(all_nodes, 2), total=len(all_nodes) * (len(all_nodes) - 1) // 2)
@@ -47,7 +46,6 @@ def adjust_graph_topology(data, model_path='model.pt', threshold=0.15, edge_to_r
         if preds[u] != preds[v] and G.has_edge(u, v) and confidences[u] > threshold and confidences[v] > threshold:
             G.remove_edge(u, v)
             edges_removed += 1
-            edge_changes = True
 
         if edges_removed == edge_to_remove:
             break
@@ -56,11 +54,9 @@ def adjust_graph_topology(data, model_path='model.pt', threshold=0.15, edge_to_r
         assert False, f"Not enough edges to remove, got {edges_removed} edges, expected {edge_to_remove} edges."
 
     # Only update edge_index if there were changes
-    if edge_changes:
-        new_edge_index = from_networkx(G).edge_index
-        data.edge_index = new_edge_index
+    new_edge_index = from_networkx(G).edge_index
 
-    return data.edge_index
+    return new_edge_index
 
 
 if __name__ == "__main__":

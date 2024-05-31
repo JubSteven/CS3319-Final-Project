@@ -83,16 +83,17 @@ def from_submission():
 def from_adaedge():
     torch.manual_seed(42)
 
+    raw_data = torch.load('data\data.pt')
     data = torch.load('data\data.pt')
     eval_model_path = os.listdir("models")
 
-    model = GCN_Net(2, data.num_features, 32, 7, 0.4)
+    model = GCN_Net(2, raw_data.num_features, 32, 7, 0.4)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
-    data.to(device)
+    raw_data.to(device)
 
     if not os.path.exists('ada_model.pt'):
-        train_wrapper(data,
+        train_wrapper(raw_data,
                       model,
                       max_epoches=800,
                       lr=0.0002,
@@ -106,7 +107,7 @@ def from_adaedge():
     edge_list = []
     means = []
     for enum in remove_edges:
-        updated_edges = adjust_graph_topology(data, model_path='ada_model.pt', threshold=0.15, edge_to_remove=enum)
+        updated_edges = adjust_graph_topology(raw_data, model_path='ada_model.pt', threshold=0.15, edge_to_remove=enum)
         data.edge_index = updated_edges
 
         val_acc = []

@@ -22,7 +22,7 @@ def remove_duplicate_edges(edge_list):
 
 
 plt_communities_full = []
-num_runs = 6
+num_runs = 8
 graph_data = GraphData(os.path.join("data", "data.pt"))
 graph = nx.Graph(graph_data.adj_train)
 partition = cm.best_partition(graph, random_state=42)
@@ -84,7 +84,7 @@ for dele_edge_num in range(0, 6):
     plt.xlabel("Community Index")
     plt.ylabel("Number of Nodes")
     plt.title("Communities of nodes from 600 deleted edges")
-    plt.legend(["Acc 80.02", "Acc 79.97", "Acc 79.43", "Acc 78.98", "Test", "Acc 80.20"])
+    plt.legend(["Acc 80.02", "Acc 79.97", "Acc 79.43", "Acc 78.98", "Test", "Acc 80.20", "Current SOTA", "AdaEdge"])
     os.makedirs("figs", exist_ok=True)
     plt.savefig(f"figs/{dele_edge_num}.pdf")
 assert False

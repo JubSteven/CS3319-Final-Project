@@ -35,9 +35,8 @@ def adjust_graph_topology(data, model_path='model.pt', threshold=0.15, edge_to_r
     confidences = torch.max(prob, dim=1).values
 
     # Adjust the graph topology
-    G = to_networkx(data, to_undirected=True)
+    G = to_networkx(data)
     all_nodes = list(G.nodes)
-
     # Track changes
     edges_removed = 0
 
@@ -55,12 +54,17 @@ def adjust_graph_topology(data, model_path='model.pt', threshold=0.15, edge_to_r
 
     # Only update edge_index if there were changes
     new_edge_index = from_networkx(G).edge_index
-    original_edges = data.edge_index
 
-    original_edges = set([tuple(edge) for edge in original_edges.T])
-    edges = set([tuple(edge) for edge in new_edge_index.T])
-    targ_edges = list(original_edges - edges)
-    print(len(targ_edges))
+    # print(data.edge_index)
+    # print(new_edge_index)
+
+    # original_edge_index = data.edge_index
+    # original_edge_index = set([tuple(list(edge.numpy())) for edge in original_edge_index.T])
+    # edges = set([tuple(list(edge.numpy())) for edge in new_edge_index.T])
+    # print(list(original_edge_index)[:30])
+    # print(list(edges)[:30])
+    # targ_edges = list(original_edge_index - edges)
+    # print(len(targ_edges))
 
     return new_edge_index
 

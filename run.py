@@ -119,7 +119,7 @@ def from_adaedge():
 
         means.append(mean)
         updated_edges = updated_edges.cpu().numpy()
-        edge_list.append(updated_edges.T.reshape(-1).tolist())
+        edge_list.append(updated_edges.reshape(-1).tolist())
 
     print("Overall mean:", np.array(means).mean().round(4))
 

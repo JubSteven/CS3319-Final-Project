@@ -1,8 +1,5 @@
-import torch_geometric as pyg
 import torch
-from torch_geometric.nn import GCNConv
 import numpy as np
-import scipy.sparse as sp
 from vgae import *
 from utils import *
 from dataset import *
@@ -83,8 +80,7 @@ def gen_graphs(cfg, graph_data, model, structural_features=None):
 def main(data_path, cfg):
     torch.manual_seed(cfg["seed"])
 
-    graph_data = GraphData(data_path, cfg["device"])  # TODO: validate the correctness of the dataloader
-    # structural_features = get_basic_graph_features(graph_data.adj_train)
+    graph_data = GraphData(data_path, cfg["device"])
 
     model = VGAE(
         adj=graph_data.adj_train_norm,

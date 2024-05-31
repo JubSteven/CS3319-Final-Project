@@ -8,3 +8,4 @@
 *.zip
 aug_model.pt
 /misc
+/figs

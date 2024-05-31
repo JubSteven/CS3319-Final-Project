@@ -55,6 +55,12 @@ def adjust_graph_topology(data, model_path='model.pt', threshold=0.15, edge_to_r
 
     # Only update edge_index if there were changes
     new_edge_index = from_networkx(G).edge_index
+    original_edges = data.edge_index
+
+    original_edges = set([tuple(edge) for edge in original_edges.T])
+    edges = set([tuple(edge) for edge in new_edge_index.T])
+    targ_edges = list(original_edges - edges)
+    print(len(targ_edges))
 
     return new_edge_index
 

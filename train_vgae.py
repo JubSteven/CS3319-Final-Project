@@ -55,10 +55,11 @@ def train_model(cfg, graph_data, model, structural_features=None):
 def gen_graphs(cfg, graph_data, model, structural_features=None):
     adj_orig = graph_data.adj_train
 
+    os.makedirs("graphs", exist_ok=True)
     if cfg["use_gae"]:
-        pickle.dump(adj_orig, open(f'graphs/graph_0_gae.pkl', 'wb'))
+        pickle.dump(adj_orig, open(os.path.join("graphs","graph_0_gae.pkl"), 'wb'))
     else:
-        pickle.dump(adj_orig, open(f'graphs/graph_0.pkl', 'wb'))
+        pickle.dump(adj_orig, open(os.path.join('graphs','graph_0.pkl'), 'wb'))
 
     features = graph_data.x.to(cfg["device"])
     for i in range(cfg["gen_graphs"]):
@@ -70,9 +71,9 @@ def gen_graphs(cfg, graph_data, model, structural_features=None):
         np.fill_diagonal(adj_recon, 0)
 
         if cfg["use_gae"]:
-            filename = f'graphs/graph_{i+1}_logits_gae.pkl'
+            filename = os.path.join('graphs',f'graph_{i+1}_logits_gae.pkl')
         else:
-            filename = f'graphs/graph_{i+1}_logits.pkl'
+            filename = os.path.join('graphs',f'graph_{i+1}_logits.pkl')
 
         pickle.dump(adj_recon, open(filename, 'wb'))
 
@@ -117,4 +118,6 @@ if __name__ == "__main__":
         "use_louvain": True,
         "seed": 42
     }
-    main(data_path="data\data.pt", cfg=cfg)
+    import os
+    data_path = "data"
+    main(data_path=os.path.join(data_path, "data.pt"), cfg=cfg)

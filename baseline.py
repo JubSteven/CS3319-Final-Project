@@ -109,10 +109,9 @@ def train_wrapper(data,
             val_acc_history.append(eval_result['val_acc'])
             if early_stopping > 0 and len(val_acc_history) > early_stopping:
                 mean_val_acc = torch.tensor(val_acc_history[-(early_stopping + 1):-1]).mean().item()
-                if (eval_result['val_acc'] - mean_val_acc) * 100 < -early_stopping_tolerance:  # NOTE: in percentage
+                if (eval_result['val_acc'] - mean_val_acc) * 100 < -early_stopping_tolerance:
                     print('[Early Stop Info] Stop at Epoch: ', epoch)
                     break
-    train_time = time.time() - start_time
     model.load_state_dict(best_model_param)
     # Dump the best model
     torch.save(model.state_dict(), save_path)

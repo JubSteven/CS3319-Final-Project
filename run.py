@@ -73,6 +73,8 @@ def from_submission():
 
 
 def from_adaedge():
+    torch.manual_seed(42)
+
     data = torch.load('data\data.pt')
     eval_model_path = os.listdir("models")
 

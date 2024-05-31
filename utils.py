@@ -79,6 +79,13 @@ def sample_graph_community(adj_orig, A_pred, remove_edge_num=100, tau=0.05):
     orig_upper = sp.triu(adj_orig, 1)
     edges = np.asarray(orig_upper.nonzero()).T
     partition = cm.best_partition(nx.Graph(adj_orig), random_state=42)
+    
+    # get the community size of each community and store it to a dict
+    cm_size_dict = {}
+    for _, item in partition.items():
+        cm_size_dict[item] = cm_size_dict.get(item, 0) + 1
+        
+    
     # Get the indices for each community index
     community_indices = [np.where(np.array(list(partition.values())) == i)[0] for i in set(partition.values())]
 
@@ -105,6 +112,9 @@ def sample_graph_community(adj_orig, A_pred, remove_edge_num=100, tau=0.05):
             # Compute the penalty term
             penalty_i = node_count[community_i] / (2 * n_remove)
             penalty_j = node_count[community_j] / (2 * n_remove)
+            
+            # penalty_i = node_count[community_i] / cm_size_dict[community_i]
+            # penalty_j = node_count[community_j] / cm_size_dict[community_j]
 
             # Update the probability of all nodes within the same community as community_i and community_j
             A_pred[community_indices[community_i], :] += (1 -

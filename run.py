@@ -1,3 +1,11 @@
+'''
+Author: huskydoge hbh001098hbh@sjtu.edu.cn
+Date: 2024-05-31 15:33:13
+LastEditors: huskydoge hbh001098hbh@sjtu.edu.cn
+LastEditTime: 2024-05-31 18:02:56
+FilePath: /GNN/CS3319-Final-Project/run.py
+Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+'''
 import pickle
 import os
 import torch
@@ -7,8 +15,9 @@ from dataset import *
 
 
 def from_graph():
-    raw_data = torch.load("data\data.pt")
-    data_loader = GraphData("data\data.pt")
+    data_path = "data"
+    raw_data = torch.load(os.path.join(data_path,"data.pt"))
+    data_loader = GraphData(os.path.join(data_path,"data.pt"))
     model_path = os.listdir("models")
 
     graph_aug = "graph_1_logits.pkl"  # NOTE: You can change this to a different graph
@@ -46,7 +55,7 @@ def from_graph():
 
 
 def from_submission():
-    raw_data = torch.load("data\data.pt")
+    raw_data = torch.load(os.path.join(data_path,"data.pt"))
     model_path = os.listdir("models")
 
     df = pd.read_csv('submission.csv')

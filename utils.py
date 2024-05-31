@@ -84,7 +84,6 @@ def sample_graph_community(adj_orig, A_pred, remove_edge_num=100, tau=0.05):
     cm_size_dict = {}
     for _, item in partition.items():
         cm_size_dict[item] = cm_size_dict.get(item, 0) + 1
-        
     
     # Get the indices for each community index
     community_indices = [np.where(np.array(list(partition.values())) == i)[0] for i in set(partition.values())]

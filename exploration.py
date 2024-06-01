@@ -42,7 +42,7 @@ for dele_edge_num in range(0, 6):
     print(f"delete edge num {(dele_edge_num + 1) * 100}")
     for num in range(1, num_runs + 1):
 
-        df = pd.read_csv('submission-{}.csv'.format(num))
+        df = pd.read_csv(os.path.join("anchors",'submission-{}.csv'.format(num)))
         edge_arr = df.to_numpy()[:, 1:]
         edge_list = []
         for i in range(edge_arr.shape[0]):
@@ -79,15 +79,59 @@ for dele_edge_num in range(0, 6):
             deleted_partitions_l1_matrix[k][j] = deleted_partitions_l1_matrix[j][k]
     print("\nL1 Diff Matrix:")
     print(deleted_partitions_l1_matrix)
+    os.makedirs("figs", exist_ok=True)
 
     # Plot a histogram of the communities
     plt.hist(plt_communities_full, bins=nb_communities_louvain)
     plt.xlabel("Community Index")
     plt.ylabel("Number of Nodes")
     plt.title(f"Communities of nodes from {(dele_edge_num + 1) * 100} deleted edges")
-    plt.legend(["Acc 80.02", "Acc 79.97", "Acc 79.43", "Acc 78.98", "Test", "Acc 80.20", "Current SOTA", "AdaEdge"])
-    os.makedirs("figs", exist_ok=True)
-    plt.savefig(f"figs/{dele_edge_num}.pdf")
+    legends = ["Acc 80.02", "Acc 79.97", "Acc 79.43", "Acc 78.98", "Test", "Acc 80.20", "Current SOTA", "AdaEdge"]
+    plt.legend(legends)
+    plt.savefig(f"figs/{dele_edge_num}_bar.pdf")
+    plt.close()
+    
+    legends = ["Acc 80.02", "Acc 79.97", "Acc 79.43", "Acc 78.98", "Test", "Acc 80.20", "Current SOTA", "AdaEdge"]
+    num_communities = deleted_partitions.shape[1]
+    cols = 4  
+    rows = (num_communities + cols - 1) // cols  # 计算需要多少行
+
+    fig, axes = plt.subplots(rows, cols, figsize=(50, 10 * rows))  # Adjust the size of the overall plot
+    axes = axes.flatten()  # Flatten the axes array for easy indexing
+
+    # Define font sizes
+    title_fontsize = 20
+    label_fontsize = 16
+    tick_fontsize = 14
+
+    # Define colors for each legend
+    colors = plt.cm.get_cmap('tab10', len(legends))
+
+    for i in range(num_communities):
+        x = range(deleted_partitions.shape[0])
+        y = np.array(deleted_partitions[:, i])
+
+        # Plot bar graph with different colors
+        for j in range(len(legends)):
+            axes[i].bar(x[j], y[j], color=colors(j), label=legends[j])
+        
+        axes[i].set_title(f"Community {i}", fontsize=title_fontsize, weight='bold')
+        axes[i].set_xlabel("Num Runs", fontsize=label_fontsize, weight='bold')
+        axes[i].set_ylabel("Number of Nodes Deleted", fontsize=label_fontsize, weight='bold')
+        
+        # Add legend
+        axes[i].legend(fontsize=label_fontsize)
+        
+        # Set tick font size
+        axes[i].tick_params(axis='both', which='major', labelsize=tick_fontsize)
+
+    # Hide extra subplots
+    for j in range(num_communities, len(axes)):
+        axes[j].axis('off')
+
+    plt.tight_layout()
+    plt.savefig(f"figs/{dele_edge_num}_bar_separate.pdf")
+    plt.close()
 assert False
 
 # Plot a histogram of the communities

@@ -84,7 +84,7 @@ for dele_edge_num in range(0, 6):
     plt.hist(plt_communities_full, bins=nb_communities_louvain)
     plt.xlabel("Community Index")
     plt.ylabel("Number of Nodes")
-    plt.title("Communities of nodes from 600 deleted edges")
+    plt.title(f"Communities of nodes from {(dele_edge_num + 1) * 100} deleted edges")
     plt.legend(["Acc 80.02", "Acc 79.97", "Acc 79.43", "Acc 78.98", "Test", "Acc 80.20", "Current SOTA", "AdaEdge"])
     os.makedirs("figs", exist_ok=True)
     plt.savefig(f"figs/{dele_edge_num}.pdf")

@@ -182,4 +182,5 @@ def from_topoinf():
 if __name__ == "__main__":
     # from_graph()
     # from_submission()
-    from_adaedge()
+    # from_adaedge()
+    from_topoinf()

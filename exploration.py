@@ -21,7 +21,6 @@ def remove_duplicate_edges(edge_list):
     return np.array(list(unique_edges))
 
 
-plt_communities_full = []
 num_runs = 8
 graph_data = GraphData(os.path.join("data", "data.pt"))
 graph = nx.Graph(graph_data.adj_train)
@@ -37,6 +36,8 @@ deleted_partitions = np.zeros((num_runs, nb_communities_louvain))
 
 deleted_partitions_l1_matrix = np.zeros((num_runs, num_runs))
 for dele_edge_num in range(0, 6):
+    plt_communities_full = []
+
     print("\n===========================")
     print(f"delete edge num {(dele_edge_num + 1) * 100}")
     for num in range(1, num_runs + 1):

@@ -28,28 +28,6 @@ def get_all_edges(A):
 
     return edges
 
-def f(A):
-    I = np.eye(A.shape[0])
-    return np.linalg.matrix_power(A+I, 2)
-
-def I(v, fA):
-    return fA[v][v]/np.sum(fA[:][v])
-
-def topoinf(A, u, v, degrees, lambda_): #topoinf for edge e_{uv}
-    A_ = A.copy()
-    A_[u][v] = 0
-    A_[v][u] = 0
-    fA_ = f(A_)
-    fA = f(A)
-    du = degrees[u]
-    dv = degrees[v]
-    R = lambda_ * (1/du + 1/dv - 1/(du-1) - 1/(dv-1))
-    A_squared = np.dot(A, A)
-    two_hop_neighbors = set(np.nonzero(A_squared[u] + A_squared[v])[0])
-    for v in two_hop_neighbors:
-        R += I(v, fA_) - I(v, fA)
-    return + R
-
 def top_n_edges(A, all_nodes, G, n, degrees, lambda_):
     """
     Find the top n edges with the highest scores.
@@ -75,6 +53,22 @@ def top_n_edges(A, all_nodes, G, n, degrees, lambda_):
                 heapq.heapreplace(min_heap, (u,v,topoinfuv))
     # The heap contains the top n edges
     return [(u,v) for u,v,_ in min_heap]
+
+def topoinf(A, u, v, degrees, lambda_): #topoinf for edge e_{uv}
+    I = np.eye(A.shape[0])
+    A_ = A.copy()
+    A_[u][v] = 0
+    A_[v][u] = 0
+    fA_ = np.linalg.matrix_power(A_+I, 2)
+    fA = np.linalg.matrix_power(A+I, 2)
+    du = degrees[u]
+    dv = degrees[v]
+    R = lambda_ * (1/du + 1/dv - 1/(du-1) - 1/(dv-1))
+    A_squared = np.dot(A, A)
+    two_hop_neighbors = set(np.nonzero(A_squared[u] + A_squared[v])[0])
+    R += np.sum([fA_[v][v]/np.sum(fA_[:][v]) - fA[v][v]/np.sum(fA[:][v]) for v in two_hop_neighbors])
+    return R
+
 
 def adjust_graph_topology_topoinf(data, model_path='model.pt', edge_to_remove=100, lambda_ = 0.1):
     """

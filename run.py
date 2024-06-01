@@ -13,11 +13,11 @@ from utils import sample_graph_community
 from baseline import inference_wrapper, train_wrapper, GCN_Net
 from dataset import *
 from train_adaedge import adjust_graph_topology
-
+from train_topoinf import adjust_graph_topology_topoinf
 
 def from_graph():
-    raw_data = torch.load("data\data.pt")
-    data_loader = GraphData("data\data.pt")
+    raw_data = torch.load("data/data.pt")
+    data_loader = GraphData("data/data.pt")
     eval_model_path = os.listdir("models")
 
     graph_aug = "graph_1_logits.pkl"  # NOTE: You can change this to a different graph
@@ -55,7 +55,7 @@ def from_graph():
 
 
 def from_submission():
-    raw_data = torch.load("data\data.pt")
+    raw_data = torch.load("data/data.pt")
     eval_model_path = os.listdir("models")
 
     df = pd.read_csv('submission-6.csv')
@@ -83,8 +83,8 @@ def from_submission():
 def from_adaedge():
     torch.manual_seed(42)
 
-    raw_data = torch.load('data\data.pt')
-    data = torch.load('data\data.pt')
+    raw_data = torch.load('data/data.pt')
+    data = torch.load('data/data.pt')
     eval_model_path = os.listdir("models")
 
     model = GCN_Net(2, raw_data.num_features, 32, 7, 0.4)
@@ -107,7 +107,7 @@ def from_adaedge():
     edge_list = []
     means = []
     for enum in remove_edges:
-        updated_edges = adjust_graph_topology(raw_data, model_path='ada_model.pt', threshold=0.15, edge_to_remove=enum)
+        updated_edges = adjust_graph_topology(raw_data, model_path='ada_model.pt',threshold=0.15, edge_to_remove=enum) #adjust lambda_ as a hyperparameter
         data.edge_index = updated_edges
 
         val_acc = []

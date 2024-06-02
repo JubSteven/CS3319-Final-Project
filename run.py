@@ -2,7 +2,7 @@
 Author: huskydoge hbh001098hbh@sjtu.edu.cn
 Date: 2024-05-31 15:33:13
 LastEditors: huskydoge hbh001098hbh@sjtu.edu.cn
-LastEditTime: 2024-05-31 18:13:18
+LastEditTime: 2024-06-02 14:38:07
 FilePath: /GNN/CS3319-Final-Project/run.py
 Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 '''
@@ -15,6 +15,8 @@ from dataset import *
 from train_adaedge import adjust_graph_topology
 from train_topoinf import adjust_graph_topology_topoinf
 from train_topoinf_easy import adjust_graph_topology_topoinf_easy
+
+DEVICE = "mps" # cuda
 
 def from_graph():
     raw_data = torch.load("data/data.pt")
@@ -89,7 +91,7 @@ def from_adaedge():
     eval_model_path = os.listdir("models")
 
     model = GCN_Net(2, raw_data.num_features, 32, 7, 0.4)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(DEVICE)
     model.to(device)
     raw_data.to(device)
 
@@ -129,35 +131,25 @@ def from_adaedge():
     # fill those empty units with -1 (don't change it)
     df.insert(0, 'ID', list(range(len(edge_list))))
     df.to_csv('submission.csv', index=False)
+    
+    
 
-def from_topoinf():
+def from_topoinf(lamda = 0.1):
     torch.manual_seed(42)
-
     raw_data = torch.load('data/data.pt')
     data = torch.load('data/data.pt')
     eval_model_path = os.listdir("models")
 
     model = GCN_Net(2, raw_data.num_features, 32, 7, 0.4)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(DEVICE)
     model.to(device)
     raw_data.to(device)
-
-    if not os.path.exists('ada_model.pt'):
-        train_wrapper(raw_data,
-                        model,
-                        max_epoches=800,
-                        lr=0.0002,
-                        weight_decay=0.0005,
-                        eval_interval=20,
-                        early_stopping=100,
-                        use_val=True,
-                        save_path=f'ada_model.pt')
 
     remove_edges = [100, 200, 300, 400, 500, 600]
     edge_list = []
     means = []
     for enum in remove_edges:
-        updated_edges = adjust_graph_topology_topoinf(raw_data, model_path='ada_model.pt', edge_to_remove=enum, lambda_ = 0.1) #adjust lambda_ as a hyperparameter
+        updated_edges = adjust_graph_topology_topoinf(raw_data, model_path='ada_model.pt',  edge_to_remove=enum, lambda_=lamda) #adjust lambda_ as a hyperparameter
         data.edge_index = updated_edges
 
         val_acc = []
@@ -177,36 +169,25 @@ def from_topoinf():
     df = pd.DataFrame(edge_list).fillna(-1).astype(int)
     # fill those empty units with -1 (don't change it)
     df.insert(0, 'ID', list(range(len(edge_list))))
-    df.to_csv('submission.csv', index=False)
+    df.to_csv("submission_lmd={}.csv".format(lamda), index=False)
+
 
 def from_topoinf_easy():
     torch.manual_seed(42)
-
     raw_data = torch.load('data/data.pt')
     data = torch.load('data/data.pt')
     eval_model_path = os.listdir("models")
 
     model = GCN_Net(2, raw_data.num_features, 32, 7, 0.4)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(DEVICE)
     model.to(device)
     raw_data.to(device)
-
-    if not os.path.exists('ada_model.pt'):
-        train_wrapper(raw_data,
-                        model,
-                        max_epoches=800,
-                        lr=0.0002,
-                        weight_decay=0.0005,
-                        eval_interval=20,
-                        early_stopping=100,
-                        use_val=True,
-                        save_path=f'ada_model.pt')
 
     remove_edges = [100, 200, 300, 400, 500, 600]
     edge_list = []
     means = []
     for enum in remove_edges:
-        updated_edges = adjust_graph_topology_topoinf(raw_data, model_path='ada_model.pt', edge_to_remove=enum) 
+        updated_edges = adjust_graph_topology_topoinf_easy(raw_data, model_path='ada_model.pt',  edge_to_remove=enum)
         data.edge_index = updated_edges
 
         val_acc = []
@@ -226,7 +207,7 @@ def from_topoinf_easy():
     df = pd.DataFrame(edge_list).fillna(-1).astype(int)
     # fill those empty units with -1 (don't change it)
     df.insert(0, 'ID', list(range(len(edge_list))))
-    df.to_csv('submission.csv', index=False)
+    df.to_csv("submission_topoinfeasy}.csv".format(), index=False)
 
 if __name__ == "__main__":
     # from_graph()

@@ -37,6 +37,7 @@ def adjust_graph_topology(data, model_path='model.pt', threshold=0.15, edge_to_r
     # Adjust the graph topology
     G = to_networkx(data, to_undirected=True)
     all_nodes = list(G.nodes)
+
     # Track changes
     edges_removed = 0
 

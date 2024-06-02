@@ -42,6 +42,20 @@ def f(A):
     return np.linalg.matrix_power(A + I, 2)
 
 
+def f_GPU(A):
+    # Convert input matrix to PyTorch Tensor and move it to the GPU
+    A_tensor = torch.from_numpy(A).to(device='cuda')
+    I_tensor = torch.eye(A_tensor.shape[0], device='cuda')
+
+    # Perform the matrix operations on the GPU
+    A_squared_tensor = torch.matmul(A_tensor, A_tensor)
+    result_tensor = A_squared_tensor + 2 * A_tensor + I_tensor
+
+    # Convert the result back to a NumPy ndarray
+    result = result_tensor.detach().cpu().numpy()
+    return result
+
+
 def I(v, fA):
     return fA[v][v] / np.sum(fA[:][v])
 

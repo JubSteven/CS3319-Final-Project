@@ -207,7 +207,7 @@ def from_topoinf_easy():
     df = pd.DataFrame(edge_list).fillna(-1).astype(int)
     # fill those empty units with -1 (don't change it)
     df.insert(0, 'ID', list(range(len(edge_list))))
-    df.to_csv("submission_topoinfeasy}.csv".format(), index=False)
+    df.to_csv("submission_topoinfeasy.csv")
 
 if __name__ == "__main__":
     # from_graph()

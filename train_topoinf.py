@@ -8,6 +8,8 @@ import math
 import numpy as np
 import heapq
 
+device = "mps"
+
 # from line_profiler import profile
 """
     To see the running time of a function, uncomment the import and the @profile decorator
@@ -44,8 +46,9 @@ def f(A):
 
 def f_GPU(A):
     # Convert input matrix to PyTorch Tensor and move it to the GPU
-    A_tensor = torch.from_numpy(A).to(device='cuda')
-    I_tensor = torch.eye(A_tensor.shape[0], device='cuda')
+    A = A.astype(np.float32) # mps only supports float32
+    A_tensor = torch.from_numpy(A).to(device=device)
+    I_tensor = torch.eye(A_tensor.shape[0], device=device)
 
     # Perform the matrix operations on the GPU
     A_squared_tensor = torch.matmul(A_tensor, A_tensor)
@@ -67,7 +70,8 @@ def topoinf(A, u, v, degrees, lambda_, fA, A_squared):
     A_[u][v] = 0
     A_[v][u] = 0
 
-    fA_ = f(A_)
+    # fA_ = f(A_)
+    fA_ = f_GPU(A_)
 
     du = degrees[u]
     dv = degrees[v]
@@ -92,7 +96,8 @@ def top_n_edges(A, all_nodes, G, n, degrees, lambda_):
     # Use a min-heap to store the top n edges
     min_heap = []
     bar = tqdm(get_all_edges(A))
-    fA = f(A)
+    # fA = f(A)
+    fA = f_GPU(A)
     A_squared = np.dot(A, A)
     for u, v in bar:
         topoinfuv = topoinf(A, u, v, degrees, lambda_, fA, A_squared)
@@ -137,9 +142,11 @@ def adjust_graph_topology_topoinf(data, model_path='model.pt', edge_to_remove=10
 if __name__ == "__main__":
     import os
 
-    data = torch.load('data\data.pt')
+    data = torch.load(os.path.join('data','data.pt'))
     model = GCN_Net(2, data.num_features, 32, 7, 0.4)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("mps")
+    print(device)
     model.to(device)
     data.to(device)
 
@@ -155,3 +162,4 @@ if __name__ == "__main__":
                       save_path=f'ada_model.pt')
 
     updated_edges = adjust_graph_topology_topoinf(data, model_path='ada_model.pt', edge_to_remove=600, lambda_=0.1)
+    

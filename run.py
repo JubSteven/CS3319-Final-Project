@@ -233,4 +233,4 @@ if __name__ == "__main__":
     # from_submission()
     # from_adaedge()
     # from_topoinf()
-    # from_topoinf_easy()
+    from_topoinf_easy()

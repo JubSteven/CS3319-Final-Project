@@ -70,7 +70,7 @@ def top_n_edges(A, n, labels):
 
 
 
-def adjust_graph_topology_topoinf(data, model_path='model.pt', edge_to_remove=100, lambda_ = 0.1):
+def adjust_graph_topology_topoinf_easy(data, model_path='model.pt', edge_to_remove=100):
     """
         Input:
             data: torch_geometric.data.Data

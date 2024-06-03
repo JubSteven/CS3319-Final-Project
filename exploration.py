@@ -21,7 +21,7 @@ def remove_duplicate_edges(edge_list):
     return np.array(list(unique_edges))
 
 
-num_runs = 8
+num_runs = 5
 graph_data = GraphData(os.path.join("data", "data.pt"))
 graph = nx.Graph(graph_data.adj_train)
 partition = cm.best_partition(graph, random_state=42)
@@ -42,7 +42,7 @@ for dele_edge_num in range(0, 6):
     print(f"delete edge num {(dele_edge_num + 1) * 100}")
     for num in range(1, num_runs + 1):
 
-        df = pd.read_csv(os.path.join("anchors",'submission-{}.csv'.format(num)))
+        df = pd.read_csv(os.path.join("anchors", 'submission-{}.csv'.format(num)))
         edge_arr = df.to_numpy()[:, 1:]
         edge_list = []
         for i in range(edge_arr.shape[0]):
@@ -81,19 +81,21 @@ for dele_edge_num in range(0, 6):
     print(deleted_partitions_l1_matrix)
     os.makedirs("figs", exist_ok=True)
 
+    legends = ["Acc 80.02 (T-A)", "Acc 79.97 (T-A)", "Acc 79.43 (GAUG)", "Acc 78.98 (GAUG)", "Acc 79.81 (GAUG_COM)"]
+
+    # [, "Test", "Acc 80.20", "Current SOTA", "AdaEdge"]
+
     # Plot a histogram of the communities
     plt.hist(plt_communities_full, bins=nb_communities_louvain)
     plt.xlabel("Community Index")
     plt.ylabel("Number of Nodes")
     plt.title(f"Communities of nodes from {(dele_edge_num + 1) * 100} deleted edges")
-    legends = ["Acc 80.02", "Acc 79.97", "Acc 79.43", "Acc 78.98", "Test", "Acc 80.20", "Current SOTA", "AdaEdge"]
     plt.legend(legends)
     plt.savefig(f"figs/{dele_edge_num}_bar.pdf")
     plt.close()
-    
-    legends = ["Acc 80.02", "Acc 79.97", "Acc 79.43", "Acc 78.98", "Test", "Acc 80.20", "Current SOTA", "AdaEdge"]
+
     num_communities = deleted_partitions.shape[1]
-    cols = 4  
+    cols = 4
     rows = (num_communities + cols - 1) // cols  # 计算需要多少行
 
     fig, axes = plt.subplots(rows, cols, figsize=(50, 10 * rows))  # Adjust the size of the overall plot
@@ -114,14 +116,14 @@ for dele_edge_num in range(0, 6):
         # Plot bar graph with different colors
         for j in range(len(legends)):
             axes[i].bar(x[j], y[j], color=colors(j), label=legends[j])
-        
+
         axes[i].set_title(f"Community {i}", fontsize=title_fontsize, weight='bold')
         axes[i].set_xlabel("Num Runs", fontsize=label_fontsize, weight='bold')
         axes[i].set_ylabel("Number of Nodes Deleted", fontsize=label_fontsize, weight='bold')
-        
+
         # Add legend
         axes[i].legend(fontsize=label_fontsize)
-        
+
         # Set tick font size
         axes[i].tick_params(axis='both', which='major', labelsize=tick_fontsize)
 
@@ -132,33 +134,3 @@ for dele_edge_num in range(0, 6):
     plt.tight_layout()
     plt.savefig(f"figs/{dele_edge_num}_bar_separate.pdf")
     plt.close()
-assert False
-
-# Plot a histogram of the communities
-plt.hist(plt_communities, bins=nb_communities_louvain)
-plt.xlabel("Community Index")
-plt.ylabel("Number of Nodes")
-plt.title("Communities of nodes from 600 deleted edges")
-plt.show()
-
-# Number of nodes in each community
-node_count = np.zeros(nb_communities_louvain)
-for k, v in partition.items():
-    node_count[v] += 1
-print(node_count)
-
-deleted_node_count = np.zeros(nb_communities_louvain)
-for community in plt_communities:
-    deleted_node_count[community] += 0.5
-print(deleted_node_count)
-
-deleted_node_percentage = np.zeros(nb_communities_louvain)
-for i in range(node_count.shape[0]):
-    deleted_node_percentage[i] = (deleted_node_count[i] / node_count[i]) * 100
-
-# Plot the percentage of nodes deleted from each community
-plt.bar(range(nb_communities_louvain), deleted_node_percentage)
-plt.xlabel("Community Index")
-plt.ylabel("Percentage of Nodes Deleted (%)")
-plt.title("Percentage of nodes deleted from each community")
-plt.show()

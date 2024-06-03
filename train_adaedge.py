@@ -56,16 +56,53 @@ def adjust_graph_topology(data, model_path='model.pt', threshold=0.15, edge_to_r
     # Only update edge_index if there were changes
     new_edge_index = from_networkx(G).edge_index
 
-    # print(data.edge_index)
-    # print(new_edge_index)
+    return new_edge_index
 
-    # original_edge_index = data.edge_index
-    # original_edge_index = set([tuple(list(edge.numpy())) for edge in original_edge_index.T])
-    # edges = set([tuple(list(edge.numpy())) for edge in new_edge_index.T])
-    # print(list(original_edge_index)[:30])
-    # print(list(edges)[:30])
-    # targ_edges = list(original_edge_index - edges)
-    # print(len(targ_edges))
+
+def adjust_graph_topology_opt(data, model_path='model.pt', threshold=0.15, edge_to_remove=100):
+    """
+        Input:
+            data: torch_geometric.data.Data
+            model_path: str
+    """
+    threshold = math.log(threshold)  # The predicted result is derived from log_softmax
+
+    model = GCN_Net(2, data.num_features, 32, 7, 0.4)  # NOTE: cannot change
+    model.load_state_dict(torch.load(model_path))
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+    data.to(device)
+    prob, preds = inference(data, model)
+    confidences = torch.max(prob, dim=1).values
+
+    # Adjust the graph topology
+    G = to_networkx(data, to_undirected=True)
+    all_nodes = list(G.nodes)
+
+    # Track changes
+    edges_removed = 0
+    candidates = []
+    bar = tqdm(combinations(all_nodes, 2), total=len(all_nodes) * (len(all_nodes) - 1) // 2)
+    for u, v in bar:
+        if preds[u] != preds[v] and G.has_edge(u, v) and confidences[u] > threshold and confidences[v] > threshold:
+            candidates.append((confidences[u] + confidences[v], u, v))
+    print(f"Got {len(candidates)} candidate edges.")
+
+    if len(candidates) < edge_to_remove:
+        assert False, f"Not enough edges to remove, got {len(candidates)} candidate edges, expected {edge_to_remove} edges."
+
+    candidates = sorted(candidates, key=lambda x: x[0], reverse=True)
+    print(candidates[:10])
+    assert False
+    for _, u, v in candidates:
+        G.remove_edge(u, v)
+        edges_removed += 1
+
+        if edges_removed == edge_to_remove:
+            break
+
+    # Only update edge_index if there were changes
+    new_edge_index = from_networkx(G).edge_index
 
     return new_edge_index
 

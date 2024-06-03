@@ -12,11 +12,12 @@ import torch
 from utils import sample_graph_community
 from baseline import inference_wrapper, train_wrapper, GCN_Net
 from dataset import *
-from train_adaedge import adjust_graph_topology
+from train_adaedge import adjust_graph_topology, adjust_graph_topology_opt
 from train_topoinf import adjust_graph_topology_topoinf
 from train_topoinf_easy import adjust_graph_topology_topoinf_easy
 
-DEVICE = "mps" # cuda
+DEVICE = "cpu"  # cuda
+
 
 def from_graph():
     raw_data = torch.load("data/data.pt")
@@ -110,7 +111,10 @@ def from_adaedge():
     edge_list = []
     means = []
     for enum in remove_edges:
-        updated_edges = adjust_graph_topology(raw_data, model_path='ada_model.pt',threshold=0.15, edge_to_remove=enum) #adjust lambda_ as a hyperparameter
+        updated_edges = adjust_graph_topology_opt(raw_data,
+                                                  model_path='ada_model.pt',
+                                                  threshold=0.15,
+                                                  edge_to_remove=enum)
         data.edge_index = updated_edges
 
         val_acc = []
@@ -131,10 +135,9 @@ def from_adaedge():
     # fill those empty units with -1 (don't change it)
     df.insert(0, 'ID', list(range(len(edge_list))))
     df.to_csv('submission.csv', index=False)
-    
-    
 
-def from_topoinf(lamda = 0.1):
+
+def from_topoinf(lamda=0.1):
     torch.manual_seed(42)
     raw_data = torch.load('data/data.pt')
     data = torch.load('data/data.pt')
@@ -149,7 +152,10 @@ def from_topoinf(lamda = 0.1):
     edge_list = []
     means = []
     for enum in remove_edges:
-        updated_edges = adjust_graph_topology_topoinf(raw_data, model_path='ada_model.pt',  edge_to_remove=enum, lambda_=lamda) #adjust lambda_ as a hyperparameter
+        updated_edges = adjust_graph_topology_topoinf(raw_data,
+                                                      model_path='ada_model.pt',
+                                                      edge_to_remove=enum,
+                                                      lambda_=lamda)  #adjust lambda_ as a hyperparameter
         data.edge_index = updated_edges
 
         val_acc = []
@@ -187,7 +193,7 @@ def from_topoinf_easy():
     edge_list = []
     means = []
     for enum in remove_edges:
-        updated_edges = adjust_graph_topology_topoinf_easy(raw_data, model_path='ada_model.pt',  edge_to_remove=enum)
+        updated_edges = adjust_graph_topology_topoinf_easy(raw_data, model_path='ada_model.pt', edge_to_remove=enum)
         data.edge_index = updated_edges
 
         val_acc = []
@@ -209,9 +215,10 @@ def from_topoinf_easy():
     df.insert(0, 'ID', list(range(len(edge_list))))
     df.to_csv("submission_topoinfeasy.csv")
 
+
 if __name__ == "__main__":
     # from_graph()
     # from_submission()
-    # from_adaedge()
+    from_adaedge()
     # from_topoinf()
-    from_topoinf_easy()
+    # from_topoinf_easy()

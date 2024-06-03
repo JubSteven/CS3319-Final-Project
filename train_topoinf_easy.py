@@ -7,6 +7,15 @@ import numpy as np
 import heapq
 device = "mps"
 
+def inference(data, model):
+    model.eval()
+    with torch.no_grad():
+        x, label, edge_index, val_mask, train_mask = data.x, data.y, data.edge_index, data.val_mask, data.train_mask
+        pred = model(x, edge_index).detach()
+        outcome = torch.argmax(pred, dim=1)
+
+    return pred, outcome
+
 def get_all_edges(A):
     """
     Get all edges from the adjacency matrix of an undirected graph.
@@ -93,10 +102,10 @@ def adjust_graph_topology_topoinf_easy(data, model_path='model.pt', edge_to_remo
     model.to(device)
     data.to(device)
     # Adjust the graph topology
-    labels = data.y
+    _, preds = inference(data, model)
     G = to_networkx(data, to_undirected=True)
     adj_t = nx.to_numpy_array(G)
-    edges_to_remove = top_n_edges(adj_t, edge_to_remove, labels)
+    edges_to_remove = top_n_edges(adj_t, edge_to_remove, preds)
     for u, v in edges_to_remove:
         G.remove_edge(u,v)
     # Only update edge_index if there were changes

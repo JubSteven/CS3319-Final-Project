@@ -92,8 +92,6 @@ def adjust_graph_topology_opt(data, model_path='model.pt', threshold=0.15, edge_
         assert False, f"Not enough edges to remove, got {len(candidates)} candidate edges, expected {edge_to_remove} edges."
 
     candidates = sorted(candidates, key=lambda x: x[0], reverse=True)
-    print(candidates[:10])
-    assert False
     for _, u, v in candidates:
         G.remove_edge(u, v)
         edges_removed += 1

@@ -178,12 +178,11 @@ def from_topoinf_easy():
         edge_list.append(updated_edges.reshape(-1).tolist())
 
     print("Overall mean:", np.array(means).mean().round(4))
-
     # NOTE: Don't change this, used for generating the submission csv
     df = pd.DataFrame(edge_list).fillna(-1).astype(int)
     # fill those empty units with -1 (don't change it)
     df.insert(0, 'ID', list(range(len(edge_list))))
-    df.to_csv('submission.csv', index=False)
+    df.to_csv('submission_topoinfeasy.csv', index=False)
 
 
 if __name__ == "__main__":

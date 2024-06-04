@@ -136,50 +136,9 @@ def from_adaedge():
     df.insert(0, 'ID', list(range(len(edge_list))))
     df.to_csv('submission.csv', index=False)
 
-
-def from_topoinf(lamda=0.1):
-    torch.manual_seed(42)
-    raw_data = torch.load('data/data.pt')
-    data = torch.load('data/data.pt')
-    eval_model_path = os.listdir("models")
-
-    model = GCN_Net(2, raw_data.num_features, 32, 7, 0.4)
-    device = torch.device(DEVICE)
-    model.to(device)
-    raw_data.to(device)
-
-    remove_edges = [100, 200, 300, 400, 500, 600]
-    edge_list = []
-    means = []
-    for enum in remove_edges:
-        updated_edges = adjust_graph_topology_topoinf(raw_data,
-                                                      model_path='ada_model.pt',
-                                                      edge_to_remove=enum,
-                                                      lambda_=lamda)  #adjust lambda_ as a hyperparameter
-        data.edge_index = updated_edges
-
-        val_acc = []
-        for model in eval_model_path:
-            result = inference_wrapper(data, os.path.join("models", model))
-            val_acc.append(round(result["val_acc"].item(), ndigits=3))
-        mean = np.array(val_acc).mean().round(3)
-        print(f"Result when {enum} edges removed: Mean {mean} | Original: {val_acc}")
-
-        means.append(mean)
-        updated_edges = updated_edges.cpu().numpy()
-        edge_list.append(updated_edges.reshape(-1).tolist())
-
-    print("Overall mean:", np.array(means).mean().round(4))
-
-    # NOTE: Don't change this, used for generating the submission csv
-    df = pd.DataFrame(edge_list).fillna(-1).astype(int)
-    # fill those empty units with -1 (don't change it)
-    df.insert(0, 'ID', list(range(len(edge_list))))
-    df.to_csv("submission_lmd={}.csv".format(lamda), index=False)
-
-
 def from_topoinf_easy():
     torch.manual_seed(42)
+
     raw_data = torch.load('data/data.pt')
     data = torch.load('data/data.pt')
     eval_model_path = os.listdir("models")
@@ -189,11 +148,22 @@ def from_topoinf_easy():
     model.to(device)
     raw_data.to(device)
 
+    if not os.path.exists('ada_model.pt'):
+        train_wrapper(raw_data,
+                      model,
+                      max_epoches=800,
+                      lr=0.0002,
+                      weight_decay=0.0005,
+                      eval_interval=20,
+                      early_stopping=100,
+                      use_val=True,
+                      save_path=f'ada_model.pt')
+
     remove_edges = [100, 200, 300, 400, 500, 600]
     edge_list = []
     means = []
     for enum in remove_edges:
-        updated_edges = adjust_graph_topology_topoinf_easy(raw_data, model_path='ada_model.pt', edge_to_remove=enum)
+        updated_edges = adjust_graph_topology_topoinf_easy(raw_data, model_path='ada_model.pt', edge_to_remove= enum)
         data.edge_index = updated_edges
 
         val_acc = []
@@ -213,12 +183,11 @@ def from_topoinf_easy():
     df = pd.DataFrame(edge_list).fillna(-1).astype(int)
     # fill those empty units with -1 (don't change it)
     df.insert(0, 'ID', list(range(len(edge_list))))
-    df.to_csv("submission_topoinfeasy.csv")
+    df.to_csv('submission.csv', index=False)
 
 
 if __name__ == "__main__":
     # from_graph()
     # from_submission()
     # from_adaedge()
-    # from_topoinf()
     from_topoinf_easy()

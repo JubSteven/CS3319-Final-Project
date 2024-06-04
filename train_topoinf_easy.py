@@ -1,6 +1,7 @@
 from baseline import train_wrapper, GCN_Net
 import torch
 from torch_geometric.utils import to_networkx, from_networkx
+import torch.nn.functional as F
 import networkx as nx
 from tqdm import tqdm
 import numpy as np
@@ -15,6 +16,13 @@ def inference(data, model):
         outcome = torch.argmax(pred, dim=1)
 
     return pred, outcome
+
+def to_onehot(L):
+    # Step 1: Identify the unique categories
+    unique_categories = torch.unique(L)
+    num_categories = unique_categories.size(0)  # Number of unique categories
+    one_hot_labels = F.one_hot(L, num_classes=num_categories)
+    return one_hot_labels
 
 def get_all_edges(A):
     """
@@ -44,6 +52,8 @@ def f_GPU(A, L):
     # Perform the matrix operations on the GPU
     A_squared_tensor = torch.matmul(A_tensor, A_tensor)
     result_tensor = A_squared_tensor + 2 * A_tensor + I_tensor
+    row_sums = result_tensor.sum(dim=1, keepdim=True)
+    result_tensor = result_tensor / row_sums
     result_tensor = torch.matmul(result_tensor, L)
     # Convert the result back to a NumPy ndarray
     return result_tensor
@@ -51,9 +61,7 @@ def f_GPU(A, L):
 def I(A, L):
     L = L.float()
     fAl = f_GPU(A, L)
-    norms_f = torch.norm(fAl)
-    norms_L = torch.norm(L)
-    IA = torch.matmul(L, fAl.t()) / (norms_L * norms_f)
+    IA = F.cosine_similarity(L, fAl, dim=-1).mean()
     return IA
 
 def topoinf(A, u, v, labels): #topoinf for edge e_{uv}
@@ -103,6 +111,7 @@ def adjust_graph_topology_topoinf_easy(data, model_path='model.pt', edge_to_remo
     data.to(device)
     # Adjust the graph topology
     _, preds = inference(data, model)
+    preds = to_onehot(preds)
     G = to_networkx(data, to_undirected=True)
     adj_t = nx.to_numpy_array(G)
     edges_to_remove = top_n_edges(adj_t, edge_to_remove, preds)

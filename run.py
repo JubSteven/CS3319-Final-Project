@@ -219,6 +219,6 @@ def from_topoinf_easy():
 if __name__ == "__main__":
     # from_graph()
     # from_submission()
-    from_adaedge()
+    # from_adaedge()
     # from_topoinf()
-    # from_topoinf_easy()
+    from_topoinf_easy()

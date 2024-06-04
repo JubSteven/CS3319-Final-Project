@@ -68,7 +68,10 @@ def topoinf(A, u, v, degrees, labels, lambda_): #topoinf for edge e_{uv}
     A_ = A.copy()
     A_[u][v] = 0
     A_[v][u] = 0
-    r = 1/degrees[u] + 1/degrees[v] - 1/(degrees[v]-1) - 1/(degrees[v]-1) if degrees[u] * degrees[v] != 1 else 2
+    if degrees[u] * degrees[v] != 1:
+        r = 1/degrees[u] + 1/degrees[v] - 1/(degrees[v]-1) - 1/(degrees[v]-1)
+    else:
+        r = 2
     return I(A_, labels) + lambda_ * r
 
 def top_n_edges(A, n, degrees, labels, lambda_):

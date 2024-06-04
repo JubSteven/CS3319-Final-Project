@@ -64,13 +64,14 @@ def I(A, L):
     IA = F.cosine_similarity(L, fAl, dim=-1).mean()
     return IA
 
-def topoinf(A, u, v, labels): #topoinf for edge e_{uv}
+def topoinf(A, u, v, degrees, labels, lambda_): #topoinf for edge e_{uv}
     A_ = A.copy()
     A_[u][v] = 0
     A_[v][u] = 0
-    return I(A_, labels)
+    r = 1/degrees[u] + 1/degrees[v] - 1/(degrees[v]-1) - 1/(degrees[v]-1) if degrees[u] * degrees[v] == 1 else 2
+    return I(A_, labels) + lambda_ * r
 
-def top_n_edges(A, n, labels):
+def top_n_edges(A, n, degrees, labels, lambda_):
     """
     Find the top n edges with the highest scores.
 
@@ -85,7 +86,7 @@ def top_n_edges(A, n, labels):
     min_heap = []
     bar = tqdm(get_all_edges(A))
     for u, v in bar:
-        topoinfuv = topoinf(A, u, v, labels)
+        topoinfuv = topoinf(A, u, v, degrees, labels, lambda_)
         if len(min_heap) < n:
             heapq.heappush(min_heap, (u,v,topoinfuv))
         else:
@@ -98,7 +99,7 @@ def top_n_edges(A, n, labels):
 
 
 
-def adjust_graph_topology_topoinf_easy(data, model_path='model.pt', edge_to_remove=100):
+def adjust_graph_topology_topoinf_easy(data, model_path='model.pt', edge_to_remove=100, lambda_ = 0.1):
     """
         Input:
             data: torch_geometric.data.Data
@@ -114,7 +115,8 @@ def adjust_graph_topology_topoinf_easy(data, model_path='model.pt', edge_to_remo
     preds = to_onehot(preds)
     G = to_networkx(data, to_undirected=True)
     adj_t = nx.to_numpy_array(G)
-    edges_to_remove = top_n_edges(adj_t, edge_to_remove, preds)
+    degrees = np.sum(adj_t, axis=1)
+    edges_to_remove = top_n_edges(adj_t, edge_to_remove, degrees, preds, lambda_)
     for u, v in edges_to_remove:
         G.remove_edge(u,v)
     # Only update edge_index if there were changes
@@ -137,7 +139,7 @@ def adjust_graph_topology_topoinf_easy(data, model_path='model.pt', edge_to_remo
 if __name__ == "__main__":
     import os
 
-    data = torch.load('data\data.pt')
+    data = torch.load('data/data.pt')
     model = GCN_Net(2, data.num_features, 32, 7, 0.4)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
@@ -154,4 +156,4 @@ if __name__ == "__main__":
                       use_val=True,
                       save_path=f'ada_model.pt')
 
-    updated_edges = adjust_graph_topology(data, model_path='ada_model.pt',edge_to_remove=600, lambda_ = 0.1)
+    updated_edges = adjust_graph_topology_topoinf_easy(data, model_path='ada_model.pt',edge_to_remove=600, lambda_ = 0.1)

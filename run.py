@@ -136,7 +136,7 @@ def from_adaedge():
     df.insert(0, 'ID', list(range(len(edge_list))))
     df.to_csv('submission.csv', index=False)
 
-def from_topoinf_easy():
+def from_topoinf_easy(lambda_ = 0.1):
     torch.manual_seed(42)
 
     raw_data = torch.load('data/data.pt')
@@ -163,7 +163,7 @@ def from_topoinf_easy():
     edge_list = []
     means = []
     for enum in remove_edges:
-        updated_edges = adjust_graph_topology_topoinf_easy(raw_data, model_path='ada_model.pt', edge_to_remove= enum)
+        updated_edges = adjust_graph_topology_topoinf_easy(raw_data, model_path='ada_model.pt', edge_to_remove= enum, lambda_ = lambda_)
         data.edge_index = updated_edges
 
         val_acc = []
@@ -178,16 +178,15 @@ def from_topoinf_easy():
         edge_list.append(updated_edges.reshape(-1).tolist())
 
     print("Overall mean:", np.array(means).mean().round(4))
-
     # NOTE: Don't change this, used for generating the submission csv
     df = pd.DataFrame(edge_list).fillna(-1).astype(int)
     # fill those empty units with -1 (don't change it)
     df.insert(0, 'ID', list(range(len(edge_list))))
-    df.to_csv('submission.csv', index=False)
+    df.to_csv('submission_topoinfeasy_lambda{}.csv'.format(lambda_), index=False)
 
 
 if __name__ == "__main__":
     # from_graph()
     # from_submission()
     # from_adaedge()
-    from_topoinf_easy()
+    from_topoinf_easy(0.1) # NOTE: You may adjust the hyperparameter lambda here

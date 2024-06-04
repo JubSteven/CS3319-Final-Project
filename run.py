@@ -13,7 +13,6 @@ from utils import sample_graph_community
 from baseline import inference_wrapper, train_wrapper, GCN_Net
 from dataset import *
 from train_adaedge import adjust_graph_topology, adjust_graph_topology_opt
-from train_topoinf import adjust_graph_topology_topoinf
 from train_topoinf_easy import adjust_graph_topology_topoinf_easy
 
 DEVICE = "cpu"  # cuda
@@ -189,4 +188,4 @@ if __name__ == "__main__":
     # from_graph()
     # from_submission()
     # from_adaedge()
-    from_topoinf_easy(0.1) # NOTE: You may adjust the hyperparameter lambda here
+    from_topoinf_easy(0.5) # NOTE: You may adjust the hyperparameter lambda here

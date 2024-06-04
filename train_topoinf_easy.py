@@ -139,7 +139,7 @@ def adjust_graph_topology_topoinf_easy(data, model_path='model.pt', edge_to_remo
 if __name__ == "__main__":
     import os
 
-    data = torch.load('data\data.pt')
+    data = torch.load('data/data.pt')
     model = GCN_Net(2, data.num_features, 32, 7, 0.4)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
@@ -156,4 +156,4 @@ if __name__ == "__main__":
                       use_val=True,
                       save_path=f'ada_model.pt')
 
-    updated_edges = adjust_graph_topology(data, model_path='ada_model.pt',edge_to_remove=600, lambda_ = 0.1)
+    updated_edges = adjust_graph_topology_topoinf_easy(data, model_path='ada_model.pt',edge_to_remove=600, lambda_ = 0.1)

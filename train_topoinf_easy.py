@@ -8,16 +8,26 @@ import numpy as np
 import heapq
 device = "mps"
 
+def to_onehot(L):
+    unique_categories = torch.unique(L)
+    num_categories = unique_categories.size(0)  # Number of unique categories
+    one_hot_labels = F.one_hot(torch.tensor(L), num_classes=num_categories)
+    return one_hot_labels
+
 def inference(data, model):
     model.eval()
     with torch.no_grad():
         x, label, edge_index, val_mask, train_mask = data.x, data.y, data.edge_index, data.val_mask, data.train_mask
         pred = model(x, edge_index).detach()
         non_zero_indices = torch.nonzero(label, as_tuple=True)[0]
+        pred = torch.exp(pred)
         # print(non_zero_indices)
+        # print(label[non_zero_indices])
+        label = to_onehot(label)
+        # print(label.shape)
         for i in non_zero_indices:
             pred[i] = label[i]
-        pred = torch.exp(pred)
+        
     return pred
 
 def get_all_edges(A):
@@ -135,7 +145,7 @@ def adjust_graph_topology_topoinf_easy(data, model_path='model.pt', edge_to_remo
 if __name__ == "__main__":
     import os
 
-    data = torch.load(os.path.join('data','data.pt')
+    data = torch.load(os.path.join('data','data.pt'))
     model = GCN_Net(2, data.num_features, 32, 7, 0.4)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)

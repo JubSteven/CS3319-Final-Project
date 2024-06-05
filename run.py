@@ -188,4 +188,4 @@ if __name__ == "__main__":
     # from_graph()
     # from_submission()
     # from_adaedge()
-    from_topoinf_easy(1e-5) # NOTE: You may adjust the hyperparameter lambda here.
+    from_topoinf_easy(1e-7) # NOTE: You may adjust the hyperparameter lambda here.

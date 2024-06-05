@@ -13,6 +13,10 @@ def inference(data, model):
     with torch.no_grad():
         x, label, edge_index, val_mask, train_mask = data.x, data.y, data.edge_index, data.val_mask, data.train_mask
         pred = model(x, edge_index).detach()
+        non_zero_indices = torch.nonzero(label, as_tuple=True)[0]
+        # print(non_zero_indices)
+        for i in non_zero_indices:
+            pred[i] = label[i]
         pred = torch.exp(pred)
     return pred
 

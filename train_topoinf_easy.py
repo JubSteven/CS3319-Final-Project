@@ -13,16 +13,7 @@ def inference(data, model):
     with torch.no_grad():
         x, label, edge_index, val_mask, train_mask = data.x, data.y, data.edge_index, data.val_mask, data.train_mask
         pred = model(x, edge_index).detach()
-        outcome = torch.argmax(pred, dim=1)
-
-    return pred, outcome
-
-def to_onehot(L):
-    # Step 1: Identify the unique categories
-    unique_categories = torch.unique(L)
-    num_categories = unique_categories.size(0)  # Number of unique categories
-    one_hot_labels = F.one_hot(L, num_classes=num_categories)
-    return one_hot_labels
+    return pred
 
 def get_all_edges(A):
     """
@@ -68,8 +59,8 @@ def topoinf(A, u, v, degrees, labels, lambda_): #topoinf for edge e_{uv}
     A_ = A.copy()
     A_[u][v] = 0
     A_[v][u] = 0
-    du = 1/degrees[u]- 1/(degrees[u]-1) if degrees[u] != 1 else -1
-    dv = 1/degrees[v]- 1/(degrees[v]-1) if degrees[v] != 1 else -1
+    du = - 1/(degrees[u]-1) if degrees[u] != 1 else -2
+    dv = - 1/(degrees[v]-1) if degrees[v] != 1 else -2
     return I(A_, labels) + lambda_ * (du+dv)
 
 def top_n_edges(A, n, degrees, labels, lambda_):
@@ -112,8 +103,7 @@ def adjust_graph_topology_topoinf_easy(data, model_path='model.pt', edge_to_remo
     model.to(device)
     data.to(device)
     # Adjust the graph topology
-    _, preds = inference(data, model)
-    preds = to_onehot(preds)
+    preds = inference(data, model)
     G = to_networkx(data, to_undirected=True)
     adj_t = nx.to_numpy_array(G)
     degrees = np.sum(adj_t, axis=1)

@@ -13,6 +13,7 @@ def inference(data, model):
     with torch.no_grad():
         x, label, edge_index, val_mask, train_mask = data.x, data.y, data.edge_index, data.val_mask, data.train_mask
         pred = model(x, edge_index).detach()
+        pred = torch.exp(pred)
     return pred
 
 def get_all_edges(A):

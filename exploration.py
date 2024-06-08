@@ -83,7 +83,6 @@ for dele_edge_num in range(0, 6):
 
     legends = ["Acc 80.02 (T-A)", "Acc 79.97 (T-A)", "Acc 79.43 (GAUG)", "Acc 78.98 (GAUG)", "Acc 79.81 (GAUG_COM)"]
 
-    # [, "Test", "Acc 80.20", "Current SOTA", "AdaEdge"]
 
     # Plot a histogram of the communities
     plt.hist(plt_communities_full, bins=nb_communities_louvain)

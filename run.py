@@ -2,7 +2,7 @@
 Author: huskydoge hbh001098hbh@sjtu.edu.cn
 Date: 2024-05-31 15:33:13
 LastEditors: huskydoge hbh001098hbh@sjtu.edu.cn
-LastEditTime: 2024-06-08 18:06:41
+LastEditTime: 2024-06-09 00:52:02
 FilePath: /GNN/CS3319-Final-Project/run.py
 Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 '''
@@ -20,8 +20,12 @@ DEVICE = "mps"  # cuda
 
 LAYER_NUM = 2
 HIDDEN_DIM = 32
-# MODEL_PATH = f"models/Layer_{LAYER_NUM}_Hidden_{HIDDEN_DIM}/model_1.pt"
+
 MODEL_PATH = "/Users/husky/Desktop/GNN/CS3319-Final-Project/ada_model.pt"
+
+# LAYER_NUM = 4
+# HIDDEN_DIM = 256
+# MODEL_PATH = f"models/Layer_{LAYER_NUM}_Hidden_{HIDDEN_DIM}/model_1.pt"
 
 
 
@@ -143,10 +147,10 @@ def from_adaedge():
     df.insert(0, 'ID', list(range(len(edge_list))))
     df.to_csv('submission.csv', index=False)
 
-def from_topoinf_easy(lambda_ = 0.1, save_path = "submission_topoinfeasy_lambda{}_layer_{}_hidden_{}.csv"):
+def from_topoinf_easy(lambda_ = 0.1, default_inf = -1, sim_metric = "cos", save_path = "new_submission_topoinfeasy_lambda{}_layer_{}_hidden_{}_defaultinf={}_sim={}.csv"):
     torch.manual_seed(42)
     device = torch.device(DEVICE)
-    save_path = save_path.format(lambda_, LAYER_NUM, HIDDEN_DIM)
+    save_path = save_path.format(lambda_, LAYER_NUM, HIDDEN_DIM, default_inf, sim_metric)
     
     raw_data = torch.load('data/data.pt')
     raw_data.to(device)
@@ -177,7 +181,7 @@ def from_topoinf_easy(lambda_ = 0.1, save_path = "submission_topoinfeasy_lambda{
     edge_list = []
     means = []
     for enum in remove_edges:
-        updated_edges = adjust_graph_topology_topoinf_easy(raw_data, model = model, edge_to_remove= enum, lambda_ = lambda_)
+        updated_edges = adjust_graph_topology_topoinf_easy(raw_data, model = model, edge_to_remove= enum, lambda_ = lambda_, default_inf=default_inf, sim_metric = sim_metric)
         data.edge_index = updated_edges
 
         val_acc = []
@@ -196,11 +200,11 @@ def from_topoinf_easy(lambda_ = 0.1, save_path = "submission_topoinfeasy_lambda{
     df = pd.DataFrame(edge_list).fillna(-1).astype(int)
     # fill those empty units with -1 (don't change it)
     df.insert(0, 'ID', list(range(len(edge_list))))
-    df.to_csv('submission_topoinfeasy_lambda{}.csv'.format(lambda_), index=False)
+    df.to_csv(save_path, index=False)
 
 
 if __name__ == "__main__":
     # from_graph()
     # from_submission()
     # from_adaedge()
-    from_topoinf_easy(lambda_= 1e-8) # NOTE: You may adjust the hyperparameter lambda here.
+    from_topoinf_easy(lambda_= 1e-7, default_inf=-1, sim_metric = "cos") # NOTE: You may adjust the hyperparameter lambda here.

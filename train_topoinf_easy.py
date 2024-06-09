@@ -50,19 +50,26 @@ def get_all_edges(A):
 
     return edges
 
+"""
 def f_GPU(A_tensor, L):
     
-    # Convert input matrix to PyTorch Tensor and move it to the GPU
-    # A = A.astype(np.float32) # mps only supports float32
-    # A_tensor = torch.from_numpy(A).to(device=device)
     I_tensor = torch.eye(A_tensor.shape[0], device=device)
-    # Perform the matrix operations on the GPU
+    
     A_squared_tensor = torch.matmul(A_tensor, A_tensor)
     result_tensor = A_squared_tensor + 2 * A_tensor + I_tensor # we are using two layer GCN, so K = 2, A^k = A^2
     row_sums = result_tensor.sum(dim=1, keepdim=True)
     result_tensor = result_tensor / row_sums
     result_tensor = torch.matmul(result_tensor, L)
     # Convert the result back to a NumPy ndarray
+    return result_tensor
+"""
+
+def f_GPU(A, L, K = 2):
+    A_tensor = A.to(device) 
+    A_K = torch.pow(A_tensor, K)
+    row_sum = torch.sum(A_K, dim=1, keepdim=True)
+    A_K = A_K / row_sum
+    result_tensor = torch.matmul(A_K, L)
     return result_tensor
 
 def I(A, L, similarity_measure='cos'):
@@ -72,15 +79,16 @@ def I(A, L, similarity_measure='cos'):
     if similarity_measure == 'cos':
         IA = F.cosine_similarity(L, fAl, dim=-1).mean()
     elif similarity_measure == 'kl':
-        IA = F.kl_div(F.log_softmax(fAl, dim=-1), F.softmax(L, dim=-1), reduction='batchmean')
-    elif similarity_measure == 'euclidean':
-        IA = -torch.norm(L - fAl, dim=-1).mean()  
+        IA = - F.kl_div(F.log_softmax(fAl, dim=-1), L, reduction='batchmean')
+    elif similarity_measure == 'euc':
+        IA = - torch.norm(L - fAl, dim=-1).mean()  
     else:
         raise ValueError(f"Unknown similarity measure: {similarity_measure}")
     
     return IA
 
-def topoinf(A, u, v, degrees, labels, lambda_): #topoinf for edge e_{uv}
+def topoinf(A, u, v, degrees, labels, lambda_, default_inf = -1, sim_metric = "cos"): #topoinf for edge e_{uv}
+    # A is raw adj matrix
     A = torch.from_numpy(A).float().to(device)
     degrees = torch.from_numpy(degrees).float().to(device)
     labels.to(device)
@@ -88,8 +96,8 @@ def topoinf(A, u, v, degrees, labels, lambda_): #topoinf for edge e_{uv}
     A_ = A.clone()
     A_[u][v] = 0
     A_[v][u] = 0
-    du = 1/(degrees[u]) - 1/(degrees[u]-1) if degrees[u] != 1 else -1
-    dv = 1/(degrees[v]) - 1/(degrees[v]-1) if degrees[v] != 1 else -1
+    du = 1/(degrees[u]) - 1/(degrees[u]-1) if degrees[u] != 1 else default_inf
+    dv = 1/(degrees[v]) - 1/(degrees[v]-1) if degrees[v] != 1 else default_inf
     
     # A^tilde = A + I, D^tilde = D + I, A^hat = D^tilde(-1/2) A^tilde D^tilde(-1/2)
     D = torch.diag(degrees)
@@ -100,9 +108,9 @@ def topoinf(A, u, v, degrees, labels, lambda_): #topoinf for edge e_{uv}
     
     A_hat = torch.matmul(torch.matmul(D_d_inv_sqrt, A_d), D_d_inv_sqrt)
 
-    return I(A_hat, labels) + lambda_ * (du+dv)
+    return I(A_hat, labels, similarity_measure=sim_metric) + lambda_ * (du+dv)
 
-def top_n_edges(A, n, degrees, labels, lambda_):
+def top_n_edges(A, n, degrees, labels, lambda_, default_inf = -1, sim_metric = "cos"):
     """
     Find the top n edges with the highest scores.
 
@@ -115,9 +123,9 @@ def top_n_edges(A, n, degrees, labels, lambda_):
     """
     # Use a min-heap to store the top n edges
     min_heap = []
-    bar = tqdm(get_all_edges(A), desc="Calculating topoinf, lambda = {}".format(lambda_), ncols=100)
+    bar = tqdm(get_all_edges(A), desc="Calculating topoinf, lambda = {}, default_inf = {}, sim = {}".format(lambda_, default_inf, sim_metric), ncols=100)
     for u, v in bar:
-        topoinfuv = topoinf(A, u, v, degrees, labels, lambda_)
+        topoinfuv = topoinf(A, u, v, degrees, labels, lambda_, default_inf, sim_metric = sim_metric)
         if len(min_heap) < n:
             heapq.heappush(min_heap, (u,v,topoinfuv))
         else:
@@ -130,7 +138,7 @@ def top_n_edges(A, n, degrees, labels, lambda_):
 
 
 
-def adjust_graph_topology_topoinf_easy(data, model, edge_to_remove=100, lambda_ = 0.1):
+def adjust_graph_topology_topoinf_easy(data, model, edge_to_remove=100, lambda_ = 0.1, default_inf = -1, sim_metric = "cos"):
     """
         Input:
             data: torch_geometric.data.Data
@@ -143,7 +151,7 @@ def adjust_graph_topology_topoinf_easy(data, model, edge_to_remove=100, lambda_ 
     G = to_networkx(data, to_undirected=True)
     adj_t = nx.to_numpy_array(G)
     degrees = np.sum(adj_t, axis=1)
-    edges_to_remove = top_n_edges(adj_t, edge_to_remove, degrees, preds, lambda_)
+    edges_to_remove = top_n_edges(adj_t, edge_to_remove, degrees, preds, lambda_, default_inf, sim_metric = sim_metric)
     for u, v in edges_to_remove:
         G.remove_edge(u,v)
     # Only update edge_index if there were changes

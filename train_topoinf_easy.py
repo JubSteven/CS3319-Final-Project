@@ -8,21 +8,27 @@ import numpy as np
 import heapq
 device = "mps"
 
+def to_onehot(L):
+    unique_categories = torch.unique(L)
+    num_categories = unique_categories.size(0)  # Number of unique categories
+    one_hot_labels = F.one_hot(L, num_classes=num_categories)
+    return one_hot_labels
+
 def inference(data, model):
     model.eval()
     with torch.no_grad():
         x, label, edge_index, val_mask, train_mask = data.x, data.y, data.edge_index, data.val_mask, data.train_mask
         pred = model(x, edge_index).detach()
-        outcome = torch.argmax(pred, dim=1)
-
-    return pred, outcome
-
-def to_onehot(L):
-    # Step 1: Identify the unique categories
-    unique_categories = torch.unique(L)
-    num_categories = unique_categories.size(0)  # Number of unique categories
-    one_hot_labels = F.one_hot(L, num_classes=num_categories)
-    return one_hot_labels
+        non_zero_indices = torch.nonzero(label, as_tuple=True)[0]
+        pred = torch.exp(pred)
+        # print(non_zero_indices)
+        # print(label[non_zero_indices])
+        label = to_onehot(label)
+        # print(label.shape)
+        for i in non_zero_indices:
+            pred[i] = label[i]
+        
+    return pred
 
 def get_all_edges(A):
     """
@@ -44,34 +50,67 @@ def get_all_edges(A):
 
     return edges
 
-def f_GPU(A, L):
-    # Convert input matrix to PyTorch Tensor and move it to the GPU
-    A = A.astype(np.float32) # mps only supports float32
-    A_tensor = torch.from_numpy(A).to(device=device)
+"""
+def f_GPU(A_tensor, L):
+    
     I_tensor = torch.eye(A_tensor.shape[0], device=device)
-    # Perform the matrix operations on the GPU
+    
     A_squared_tensor = torch.matmul(A_tensor, A_tensor)
-    result_tensor = A_squared_tensor + 2 * A_tensor + I_tensor
+    result_tensor = A_squared_tensor + 2 * A_tensor + I_tensor # we are using two layer GCN, so K = 2, A^k = A^2
     row_sums = result_tensor.sum(dim=1, keepdim=True)
     result_tensor = result_tensor / row_sums
     result_tensor = torch.matmul(result_tensor, L)
     # Convert the result back to a NumPy ndarray
     return result_tensor
+"""
 
-def I(A, L):
+def f_GPU(A, L, K = 2):
+    A_tensor = A.to(device) 
+    A_K = torch.pow(A_tensor, K)
+    row_sum = torch.sum(A_K, dim=1, keepdim=True)
+    A_K = A_K / row_sum
+    result_tensor = torch.matmul(A_K, L)
+    return result_tensor
+
+def I(A, L, similarity_measure='cos'):
     L = L.float()
     fAl = f_GPU(A, L)
-    IA = F.cosine_similarity(L, fAl, dim=-1).mean()
+    
+    if similarity_measure == 'cos':
+        IA = F.cosine_similarity(L, fAl, dim=-1).mean()
+    elif similarity_measure == 'kl':
+        IA = - F.kl_div(F.log_softmax(fAl, dim=-1), L, reduction='batchmean')
+    elif similarity_measure == 'euc':
+        IA = - torch.norm(L - fAl, dim=-1).mean()  
+    else:
+        raise ValueError(f"Unknown similarity measure: {similarity_measure}")
+    
     return IA
 
-def topoinf(A, u, v, degrees, labels, lambda_): #topoinf for edge e_{uv}
-    A_ = A.copy()
+def topoinf(A, u, v, degrees, labels, lambda_, default_inf = -1, sim_metric = "cos"): #topoinf for edge e_{uv}
+    # A is raw adj matrix
+    A = torch.from_numpy(A).float().to(device)
+    degrees = torch.from_numpy(degrees).float().to(device)
+    labels.to(device)
+    
+    A_ = A.clone()
     A_[u][v] = 0
     A_[v][u] = 0
-    r = 1/degrees[u] + 1/degrees[v] - 1/(degrees[v]-1) - 1/(degrees[v]-1) if degrees[u] * degrees[v] == 1 else 2
-    return I(A_, labels) + lambda_ * r
+    du = 1/(degrees[u]) - 1/(degrees[u]-1) if degrees[u] != 1 else default_inf
+    dv = 1/(degrees[v]) - 1/(degrees[v]-1) if degrees[v] != 1 else default_inf
+    
+    # A^tilde = A + I, D^tilde = D + I, A^hat = D^tilde(-1/2) A^tilde D^tilde(-1/2)
+    D = torch.diag(degrees)
+    D_d = D + torch.eye(D.shape[0], device=device)
+    
+    A_d = A_ + torch.eye(A_.shape[0], device=device)
+    D_d_inv_sqrt = torch.diag(1/torch.sqrt(D_d.sum(dim=1)))
+    
+    A_hat = torch.matmul(torch.matmul(D_d_inv_sqrt, A_d), D_d_inv_sqrt)
 
-def top_n_edges(A, n, degrees, labels, lambda_):
+    return I(A_hat, labels, similarity_measure=sim_metric) + lambda_ * (du+dv)
+
+def top_n_edges(A, n, degrees, labels, lambda_, default_inf = -1, sim_metric = "cos"):
     """
     Find the top n edges with the highest scores.
 
@@ -84,9 +123,9 @@ def top_n_edges(A, n, degrees, labels, lambda_):
     """
     # Use a min-heap to store the top n edges
     min_heap = []
-    bar = tqdm(get_all_edges(A))
+    bar = tqdm(get_all_edges(A), desc="Calculating topoinf, lambda = {}, default_inf = {}, sim = {}".format(lambda_, default_inf, sim_metric), ncols=100)
     for u, v in bar:
-        topoinfuv = topoinf(A, u, v, degrees, labels, lambda_)
+        topoinfuv = topoinf(A, u, v, degrees, labels, lambda_, default_inf, sim_metric = sim_metric)
         if len(min_heap) < n:
             heapq.heappush(min_heap, (u,v,topoinfuv))
         else:
@@ -99,24 +138,20 @@ def top_n_edges(A, n, degrees, labels, lambda_):
 
 
 
-def adjust_graph_topology_topoinf_easy(data, model_path='model.pt', edge_to_remove=100, lambda_ = 0.1):
+def adjust_graph_topology_topoinf_easy(data, model, edge_to_remove=100, lambda_ = 0.1, default_inf = -1, sim_metric = "cos"):
     """
         Input:
             data: torch_geometric.data.Data
             model_path: str
     """
-    model = GCN_Net(2, data.num_features, 32, 7, 0.4)  # NOTE: cannot change
-    model.load_state_dict(torch.load(model_path))
     device = torch.device("mps")
-    model.to(device)
     data.to(device)
     # Adjust the graph topology
-    _, preds = inference(data, model)
-    preds = to_onehot(preds)
+    preds = inference(data, model)
     G = to_networkx(data, to_undirected=True)
     adj_t = nx.to_numpy_array(G)
     degrees = np.sum(adj_t, axis=1)
-    edges_to_remove = top_n_edges(adj_t, edge_to_remove, degrees, preds, lambda_)
+    edges_to_remove = top_n_edges(adj_t, edge_to_remove, degrees, preds, lambda_, default_inf, sim_metric = sim_metric)
     for u, v in edges_to_remove:
         G.remove_edge(u,v)
     # Only update edge_index if there were changes
@@ -139,7 +174,7 @@ def adjust_graph_topology_topoinf_easy(data, model_path='model.pt', edge_to_remo
 if __name__ == "__main__":
     import os
 
-    data = torch.load('data/data.pt')
+    data = torch.load(os.path.join('data','data.pt'))
     model = GCN_Net(2, data.num_features, 32, 7, 0.4)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)

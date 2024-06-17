@@ -136,17 +136,36 @@ def inference_wrapper(data, model_path='model.pt'):
 
 
 if __name__ == "__main__":
-    data = torch.load('data\data.pt')
-    model = GCN_Net(2, data.num_features, 32, 7, 0.4)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    import os
+    
+    data = torch.load(os.path.join('data','data.pt'))
+    LAYER_NUM = 4
+    HIDDEN_DIM = 256
+    MAX_EPOCH = 1000
+    model = GCN_Net(LAYER_NUM, data.num_features, HIDDEN_DIM, 7, 0.4)
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = input("Please enter the device: ")
+    if device == "cuda":
+        if torch.cuda.is_available():
+            device = torch.device("cuda")
+        else:
+            raise ValueError("CUDA is not available.")
+    elif device == "mps":
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
     model.to(device)
     data.to(device)
+    save_dir = os.path.join("models", f"Layer_{LAYER_NUM}_Hidden_{HIDDEN_DIM}_Epoch_{MAX_EPOCH}")
+    os.makedirs(save_dir, exist_ok=True)
     for i in range(1, 10):
+        save_path = os.path.join(save_dir, f"model_{i}.pt")
         train_wrapper(data,
                       model,
-                      max_epoches=800,
+                      max_epoches=MAX_EPOCH,
                       lr=0.0002,
                       weight_decay=0.0005,
                       eval_interval=20,
                       early_stopping=100,
-                      save_path=f'models/model_{i}.pt')
+                      use_val=True,
+                      save_path=save_path)

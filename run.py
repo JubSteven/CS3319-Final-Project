@@ -2,7 +2,7 @@
 Author: huskydoge hbh001098hbh@sjtu.edu.cn
 Date: 2024-05-31 15:33:13
 LastEditors: huskydoge hbh001098hbh@sjtu.edu.cn
-LastEditTime: 2024-06-02 14:38:07
+LastEditTime: 2024-06-09 00:52:02
 FilePath: /GNN/CS3319-Final-Project/run.py
 Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 '''
@@ -15,13 +15,24 @@ from dataset import *
 from train_adaedge import adjust_graph_topology, adjust_graph_topology_opt
 from train_topoinf_easy import adjust_graph_topology_topoinf_easy
 
-DEVICE = "cpu"  # cuda
+DEVICE = "mps"  # cuda
+
+
+LAYER_NUM = 2
+HIDDEN_DIM = 32
+
+MODEL_PATH = "/Users/husky/Desktop/GNN/CS3319-Final-Project/ada_model.pt"
+
+# LAYER_NUM = 4
+# HIDDEN_DIM = 256
+# MODEL_PATH = f"models/Layer_{LAYER_NUM}_Hidden_{HIDDEN_DIM}/model_1.pt"
+
 
 
 def from_graph(tau=0.01):
     raw_data = torch.load("data/data.pt")
     data_loader = GraphData("data/data.pt")
-    eval_model_path = os.listdir("models")
+    eval_model_path =  os.listdir("models/Layer_2_Hidden_32")
 
     graph_aug = "graph_1_logits.pkl"  # NOTE: You can change this to a different graph
 
@@ -39,8 +50,8 @@ def from_graph(tau=0.01):
         raw_data.edge_index = torch.from_numpy(edges.T)
 
         val_acc = []
-        for model in eval_model_path:
-            result = inference_wrapper(raw_data, os.path.join("models", model))
+        for model_id in eval_model_path:
+            result = inference_wrapper(raw_data, os.path.join("models/Layer_2_Hidden_32", model_id))
             val_acc.append(round(result["val_acc"].item(), ndigits=3))
         mean = np.array(val_acc).mean().round(3)
         print(f"Result when {enum} edges removed: Mean {mean} | Original: {val_acc}")
@@ -63,7 +74,7 @@ def from_graph(tau=0.01):
 
 def from_submission():
     raw_data = torch.load("data/data.pt")
-    eval_model_path = os.listdir("models")
+    eval_model_path =  os.listdir("models/Layer_2_Hidden_32")
 
     df = pd.read_csv('submission.csv')
     edge_arr = df.to_numpy()[:, 1:]
@@ -77,8 +88,8 @@ def from_submission():
         raw_data.edge_index = torch.from_numpy(edge)
 
         val_acc = []
-        for model in eval_model_path:
-            result = inference_wrapper(raw_data, os.path.join("models", model))
+        for model_id in eval_model_path:
+            result = inference_wrapper(raw_data, os.path.join("models/Layer_2_Hidden_32", model_id))
             val_acc.append(round(result["val_acc"].item(), ndigits=3))
         mean = np.array(val_acc).mean().round(3)
         means.append(mean)
@@ -92,10 +103,11 @@ def from_adaedge():
 
     raw_data = torch.load('data/data.pt')
     data = torch.load('data/data.pt')
-    eval_model_path = os.listdir("models")
+    eval_model_path =  os.listdir("models/Layer_2_Hidden_32")
 
-    model = GCN_Net(2, raw_data.num_features, 32, 7, 0.4)
+    model = GCN_Net(LAYER_NUM, raw_data.num_features, HIDDEN_DIM, 7, 0.4)
     device = torch.device(DEVICE)
+    model.load_state_dict(torch.load(MODEL_PATH))
     model.to(device)
     raw_data.to(device)
 
@@ -121,8 +133,8 @@ def from_adaedge():
         data.edge_index = updated_edges
 
         val_acc = []
-        for model in eval_model_path:
-            result = inference_wrapper(data, os.path.join("models", model))
+        for model_id in eval_model_path:
+            result = inference_wrapper(data, os.path.join("models/Layer_2_Hidden_32", model_id))
             val_acc.append(round(result["val_acc"].item(), ndigits=3))
         mean = np.array(val_acc).mean().round(3)
         print(f"Result when {enum} edges removed: Mean {mean} | Original: {val_acc}")
@@ -139,18 +151,29 @@ def from_adaedge():
     df.insert(0, 'ID', list(range(len(edge_list))))
     df.to_csv('submission.csv', index=False)
 
+<<<<<<< HEAD
 
 def from_topoinf_easy(lambda_=0.1):
+=======
+def from_topoinf_easy(lambda_ = 0.1, default_inf = -1, sim_metric = "cos", save_path = "new_submission_topoinfeasy_lambda{}_layer_{}_hidden_{}_defaultinf={}_sim={}.csv"):
+>>>>>>> 0dd33c9032a62342c566f43c31c2a3e6121c836b
     torch.manual_seed(42)
-
-    raw_data = torch.load('data/data.pt')
-    data = torch.load('data/data.pt')
-    eval_model_path = os.listdir("models")
-
-    model = GCN_Net(2, raw_data.num_features, 32, 7, 0.4)
     device = torch.device(DEVICE)
-    model.to(device)
+    save_path = save_path.format(lambda_, LAYER_NUM, HIDDEN_DIM, default_inf, sim_metric)
+    
+    raw_data = torch.load('data/data.pt')
     raw_data.to(device)
+    model = GCN_Net(LAYER_NUM, raw_data.num_features, HIDDEN_DIM, 7, 0.4)
+
+    model.load_state_dict(torch.load(MODEL_PATH))
+    model.to(device)
+
+
+    data = torch.load('data/data.pt')
+    eval_model_path =  os.listdir("models/Layer_2_Hidden_32")
+
+    device = torch.device(DEVICE)
+
 
     if not os.path.exists('ada_model.pt'):
         train_wrapper(raw_data,
@@ -167,15 +190,19 @@ def from_topoinf_easy(lambda_=0.1):
     edge_list = []
     means = []
     for enum in remove_edges:
+<<<<<<< HEAD
         updated_edges = adjust_graph_topology_topoinf_easy(raw_data,
                                                            model_path='ada_model.pt',
                                                            edge_to_remove=enum,
                                                            lambda_=lambda_)
+=======
+        updated_edges = adjust_graph_topology_topoinf_easy(raw_data, model = model, edge_to_remove= enum, lambda_ = lambda_, default_inf=default_inf, sim_metric = sim_metric)
+>>>>>>> 0dd33c9032a62342c566f43c31c2a3e6121c836b
         data.edge_index = updated_edges
 
         val_acc = []
-        for model in eval_model_path:
-            result = inference_wrapper(data, os.path.join("models", model))
+        for model_id in eval_model_path:
+            result = inference_wrapper(data, os.path.join("models/Layer_2_Hidden_32", model_id))
             val_acc.append(round(result["val_acc"].item(), ndigits=3))
         mean = np.array(val_acc).mean().round(3)
         print(f"Result when {enum} edges removed: Mean {mean} | Original: {val_acc}")
@@ -189,7 +216,7 @@ def from_topoinf_easy(lambda_=0.1):
     df = pd.DataFrame(edge_list).fillna(-1).astype(int)
     # fill those empty units with -1 (don't change it)
     df.insert(0, 'ID', list(range(len(edge_list))))
-    df.to_csv('submission_topoinfeasy_lambda{}.csv'.format(lambda_), index=False)
+    df.to_csv(save_path, index=False)
 
 
 if __name__ == "__main__":
@@ -198,4 +225,8 @@ if __name__ == "__main__":
 
     # from_submission()
     # from_adaedge()
+<<<<<<< HEAD
     # from_topoinf_easy(0.5) # NOTE: You may adjust the hyperparameter lambda here
+=======
+    from_topoinf_easy(lambda_= 1e-7, default_inf=-1, sim_metric = "cos") # NOTE: You may adjust the hyperparameter lambda here.
+>>>>>>> 0dd33c9032a62342c566f43c31c2a3e6121c836b

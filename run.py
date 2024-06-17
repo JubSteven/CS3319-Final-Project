@@ -18,7 +18,7 @@ from train_topoinf_easy import adjust_graph_topology_topoinf_easy
 DEVICE = "cpu"  # cuda
 
 
-def from_graph():
+def from_graph(tau=0.01):
     raw_data = torch.load("data/data.pt")
     data_loader = GraphData("data/data.pt")
     eval_model_path = os.listdir("models")
@@ -35,7 +35,7 @@ def from_graph():
     edge_list = []
     means = []
     for enum in remove_edges:
-        edges = sample_graph_community(data_loader.adj_train, adj, enum, tau=0.01)
+        edges = sample_graph_community(data_loader.adj_train, adj, enum, tau)
         raw_data.edge_index = torch.from_numpy(edges.T)
 
         val_acc = []
@@ -54,14 +54,18 @@ def from_graph():
     df = pd.DataFrame(edge_list).fillna(-1).astype(int)
     # fill those empty units with -1 (don't change it)
     df.insert(0, 'ID', list(range(len(edge_list))))
-    df.to_csv('submission.csv', index=False)
+    df.to_csv(f'submission_{tau}.csv', index=False)
+
+    mean = np.array(means).mean().round(4)
+
+    return mean
 
 
 def from_submission():
     raw_data = torch.load("data/data.pt")
     eval_model_path = os.listdir("models")
 
-    df = pd.read_csv('submission-6.csv')
+    df = pd.read_csv('submission.csv')
     edge_arr = df.to_numpy()[:, 1:]
     edge_list = []
     for i in range(edge_arr.shape[0]):
@@ -135,7 +139,8 @@ def from_adaedge():
     df.insert(0, 'ID', list(range(len(edge_list))))
     df.to_csv('submission.csv', index=False)
 
-def from_topoinf_easy(lambda_ = 0.1):
+
+def from_topoinf_easy(lambda_=0.1):
     torch.manual_seed(42)
 
     raw_data = torch.load('data/data.pt')
@@ -162,7 +167,10 @@ def from_topoinf_easy(lambda_ = 0.1):
     edge_list = []
     means = []
     for enum in remove_edges:
-        updated_edges = adjust_graph_topology_topoinf_easy(raw_data, model_path='ada_model.pt', edge_to_remove= enum, lambda_ = lambda_)
+        updated_edges = adjust_graph_topology_topoinf_easy(raw_data,
+                                                           model_path='ada_model.pt',
+                                                           edge_to_remove=enum,
+                                                           lambda_=lambda_)
         data.edge_index = updated_edges
 
         val_acc = []
@@ -185,7 +193,9 @@ def from_topoinf_easy(lambda_ = 0.1):
 
 
 if __name__ == "__main__":
-    # from_graph()
+    for tau in range(5, 30, 5):
+        mean = from_graph(tau / 1000)
+
     # from_submission()
     # from_adaedge()
-    from_topoinf_easy(0.5) # NOTE: You may adjust the hyperparameter lambda here
+    # from_topoinf_easy(0.5) # NOTE: You may adjust the hyperparameter lambda here
